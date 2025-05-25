@@ -203,6 +203,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 @app.get("/")
 async def root():
     """Serves the index.html"""
+    print("index path:> ",os.path.join(STATIC_DIR, "index.html"))
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 

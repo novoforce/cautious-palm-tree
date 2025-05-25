@@ -7,7 +7,7 @@ import logging
 # Configure logging for better visibility within the service
 # Note: FastAPI will handle global logging usually, but this is good for internal service logs.
 logging.basicConfig(
-    level=logging.INFO,  # Changed to INFO for better visibility of service operations
+    level=logging.ERROR,  # Changed to INFO for better visibility of service operations
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
