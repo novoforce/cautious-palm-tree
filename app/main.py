@@ -93,7 +93,7 @@ async def agent_to_client_messaging(
                     "interrupted": event.interrupted,
                 }
                 await websocket.send_text(json.dumps(message))
-                print(f"[AGENT TO CLIENT]: {message}")
+                # print(f"[AGENT TO CLIENT]: {message}")
                 continue
 
             # Read the Content and its first Part
@@ -114,7 +114,7 @@ async def agent_to_client_messaging(
                     "role": "model",
                 }
                 await websocket.send_text(json.dumps(message))
-                print(f"[AGENT TO CLIENT]: text/plain: {part.text}")
+                # print(f"[AGENT TO CLIENT]: text/plain: {part.text}")
 
             # If it's audio, send Base64 encoded audio data
             is_audio = (
@@ -131,7 +131,7 @@ async def agent_to_client_messaging(
                         "role": "model",
                     }
                     await websocket.send_text(json.dumps(message))
-                    print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
+                    # print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
 
 
 async def client_to_agent_messaging(
@@ -151,7 +151,7 @@ async def client_to_agent_messaging(
             # Send a text message
             content = types.Content(role=role, parts=[types.Part.from_text(text=data)])
             live_request_queue.send_content(content=content)
-            print(f"[CLIENT TO AGENT PRINT]: {data}")
+            # print(f"[CLIENT TO AGENT PRINT]: {data}")
         elif mime_type == "audio/pcm":
             # Send audio data
             decoded_data = base64.b64decode(data)

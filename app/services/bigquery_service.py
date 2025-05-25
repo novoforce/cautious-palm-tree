@@ -7,7 +7,7 @@ import logging
 # Configure logging for better visibility within the service
 # Note: FastAPI will handle global logging usually, but this is good for internal service logs.
 logging.basicConfig(
-    level=logging.ERROR,  # Changed to INFO for better visibility of service operations
+    level=logging.INFO,  # Changed to INFO for better visibility of service operations
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -62,10 +62,11 @@ class BigQueryReader:
             )
 
     def list_tables_in_dataset(
-        self, project: str, dataset_id: str, max_results: int = 10
+        self, project: str = 'bigquery-public-data', dataset_id: str= 'thelook_ecommerce', max_results: int = 10
     ) -> list:
         """
         Lists tables in a specified BigQuery dataset.
+        Default project is bigquery-public-data and the default dataset is thelook_ecommerce.
 
         Args:
             project (str): The project ID where the dataset resides (e.g., 'bigquery-public-data').
@@ -101,28 +102,30 @@ class BigQueryReader:
             logger.error(f"An unexpected error occurred while listing tables: {e}")
             return []
 
-    def execute_query(self, query: str) -> list:
+    def execute_query(self, query: str) -> tuple:
         """
         Executes a SQL query on BigQuery and returns the results.
+        Default project is `bigquery-public-data` and the default dataset is `thelook_ecommerce`.
 
         Args:
             query (str): The SQL query string to execute.
 
         Returns:
-            list: A list of BigQuery Row objects, or an empty list if an error occurs.
+            tuple: The SQL query and a list of BigQuery Row objects, or an empty list if an error occurs.
         """
         logger.info("Executing BigQuery query...")
         try:
+            print("Generated sql:> ",query)
             query_job = self.client.query(query)  # API request
             results = query_job.result()  # Waits for job to complete
             rows = [
                 dict(row) for row in results
             ]  # Convert rows to dictionaries for easier handling
             logger.info(f"Query executed successfully. Fetched {len(rows)} rows.")
-            return rows
+            return (query,rows)
         except GoogleCloudError as e:
             logger.error(f"BigQuery query failed with Google Cloud Error: {e}")
-            return []
+            return ()
         except Exception as e:
             logger.error(f"An unexpected error occurred during query execution: {e}")
-            return []
+            return ()
