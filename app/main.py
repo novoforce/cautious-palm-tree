@@ -96,6 +96,36 @@ async def agent_to_client_messaging(
                 # print(f"[AGENT TO CLIENT]: {message}")
                 continue
 
+            # if event.content and event.content.parts:
+            #     if event.get_function_calls():
+            #         print("  Type: Tool Call Request")
+            #     elif event.get_function_responses():
+            #         print("  Type: Tool Result")
+            calls = event.get_function_calls()
+            if calls:
+                for call in calls:
+                    tool_name = call.name
+                    arguments = call.args # This is usually a dictionary
+                    print(f"  Tool: {tool_name}, Args: {arguments}")
+                    message = {
+                    "mime_type": "text/plain",
+                    "data": f"  Tool:> {tool_name}, Args: {arguments}\n",
+                    "role": "model",
+                }
+                    await websocket.send_text(json.dumps(message))
+            
+            responses = event.get_function_responses()
+            if responses:
+                for response in responses:
+                    tool_name = response.name
+                    result_dict = response.response # The dictionary returned by the tool
+                    print(f"  Tool Result: {tool_name} -> {result_dict}")
+                    message = {
+                    "mime_type": "text/plain",
+                    "data": f"  Tool Result:> {tool_name} -> {result_dict}\n",
+                    "role": "model",
+                }
+                    await websocket.send_text(json.dumps(message))
             # Read the Content and its first Part
             part = event.content and event.content.parts and event.content.parts[0]
             if not part:
