@@ -3,6 +3,7 @@ import os
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound, GoogleCloudError
 import logging
+import traceback
 
 # Configure logging for better visibility within the service
 # Note: FastAPI will handle global logging usually, but this is good for internal service logs.
@@ -122,10 +123,9 @@ class BigQueryReader:
                 dict(row) for row in results
             ]  # Convert rows to dictionaries for easier handling
             logger.info(f"Query executed successfully. Fetched {len(rows)} rows.")
-            return (query,rows)
-        except GoogleCloudError as e:
-            logger.error(f"BigQuery query failed with Google Cloud Error: {e}")
-            return ()
+            return (rows)
         except Exception as e:
-            logger.error(f"An unexpected error occurred during query execution: {e}")
-            return ()
+            error_message = f"An unexpected error occurred during query execution: {e}"
+            logger.error(error_message)
+            logger.error(traceback.format_exc())
+        return (traceback.format_exc())

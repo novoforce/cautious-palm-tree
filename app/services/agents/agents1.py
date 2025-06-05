@@ -3,7 +3,28 @@ from app.core.dependencies import get_bigquery_reader
 from app.services.agents.agents_tools import get_similar_tables_tool, exit_loop, say_hello, say_goodbye
 
 bq_rdr= get_bigquery_reader()
-MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-live-001"
+
+# print('---->>>>',get_similar_tables_tool('How many users are there in the dataset?'))# Example usage of the tool
+
+MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-live-001" #"gemini-2.0-flash-exp" # Example model name, replace with actual model name
+MODEL_GEMINI_2_0_FLASH_LITE= "gemini-2.0-flash-lite"
+
+
+greeting_agent = Agent(
+    model=MODEL_GEMINI_2_0_FLASH,
+    name="greeting_agent",
+    instruction="You are the Greeting Agent. Your ONLY task is to provide a friendly greeting using the 'say_hello' tool. Do nothing else.",
+    description="Handles simple greetings and hellos using the 'say_hello' tool.",
+    tools=[say_hello],
+)
+
+farewell_agent = Agent(
+        model=MODEL_GEMINI_2_0_FLASH,
+        name="farewell_agent",
+        instruction="You are the Farewell Agent. Your ONLY task is to provide a polite goodbye message using the 'say_goodbye' tool. Do not perform any other actions.",
+        description="Handles simple farewells and goodbyes using the 'say_goodbye' tool.",
+        tools=[say_goodbye],
+    )
 
 sql_generator_agent = Agent(
         model=MODEL_GEMINI_2_0_FLASH,
@@ -22,7 +43,8 @@ sql_generator_agent = Agent(
         If the user asks for similar tables, use the 'get_similar_tables_tool' to retrieve relevant tables and their metadata.
         """,
         tools=[get_similar_tables_tool],
-        output_key="sql_query",)
+        output_key="sql_query",
+    )
 
 sql_executor_agent = Agent(
         model=MODEL_GEMINI_2_0_FLASH,
@@ -34,7 +56,6 @@ sql_executor_agent = Agent(
         """,
         tools=[bq_rdr.execute_query],
         output_key="sql_execution_result",
-        include_contents='none'
     )
 
 sql_refiner_agent = Agent(
@@ -46,33 +67,9 @@ sql_refiner_agent = Agent(
         #ORIGINAL SQL QUERY:> {{original_sql_query}}
         If the SQL execution result is empty or indicates an error, refine the SQL query to correct it.
         If the SQL execution result is valid, return the original SQL query as it is and call the 'exit_loop' tool to end the iterative process.
-        
-        #SQL EXECUTION RESULT:> {{sql_execution_result}}
         """,
-        tools=[exit_loop],
+        tools=[bq_rdr.execute_query,exit_loop],
         output_key="sql_query",
-    )
-
-from pydantic import BaseModel, Field
-
-class SQLOutput(BaseModel):
-    final_sql: str = Field(description="The final SQL query after refinement.")
-    sql_results: list = Field(default_factory=list, description="The results of the SQL query execution.")
-
-sql_extractor_agent = Agent(
-        model=MODEL_GEMINI_2_0_FLASH,
-        name="sql_extractor_agent",
-        description="Handles the extraction of the SQL query from the SQL execution result.",
-        instruction="""You are the Bigquery SQL extractor. Your task is to extract the SQL query from the SQL execution result.
-        You will be provided with the SQL execution result.
-        
-        #Following are the SQL and its results:> 
-        {{sql_query}}
-        {{sql_execution_result}}
-        """,
-        output_schema=SQLOutput,
-        output_key="output",
-        include_contents='none'
     )
 
 refinement_loop = LoopAgent(
@@ -88,11 +85,12 @@ root_sql_agent = SequentialAgent(
     name="SequentialLoopPipeline",
     sub_agents=[
         sql_generator_agent, # Run first to create initial doc
-        refinement_loop,# Then run the critique/refine loop
-        sql_extractor_agent
+        refinement_loop       # Then run the critique/refine loop
     ],
     description="Generate the SQL query based on user request, execute it, and refine it iteratively until the query is correct or no further refinements are needed",
 )
+
+
 
 general_agent = Agent(
     # A unique name for the agent.
@@ -102,9 +100,15 @@ general_agent = Agent(
     instruction=f"""
     # Jarvis: The Helpful Assistant
         You are Jarvis, a helpful assistant capable of healthy conversation and resolving queries related to databases using the appropriate tools provided. Follow these guidelines:
+
+        ## Specialized Sub-Agents
+        - **greeting_agent**: Handles simple greetings like "Hi" or "Hello". Delegate such queries to this agent.
+        - **farewell_agent**: Handles simple farewells like "Bye" or "See you". Delegate such queries to this agent.
         - **root_sql_agent**: Handles database-related queries, generating SQL queries, executing them, and refining them iteratively.
 
         ## Query Analysis
+        - If the user's query is a greeting, delegate to **greeting_agent**.
+        - If the user's query is a farewell, delegate to **farewell_agent**.
         - For database-related queries, delegate to **root_sql_agent**.
         - If the query does not fit any of the above categories, respond with a friendly message indicating that you can assist with database-related queries or greetings/farewells.
         - For list table database-related queries, invoke 'bq_rdr.list_tables_in_dataset' tool to get the list.
@@ -113,5 +117,5 @@ general_agent = Agent(
         - Aim to end every interaction on a positive note.
     """,
     tools=[bq_rdr.list_tables_in_dataset],
-    sub_agents=[root_sql_agent]
+    sub_agents=[greeting_agent, farewell_agent, root_sql_agent]
 )
