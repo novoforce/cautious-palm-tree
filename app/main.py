@@ -28,50 +28,63 @@ logger = logging.getLogger("fastapi_app")
 APP_NAME = "Serena Agent"
 session_service = InMemorySessionService()
 
-
-# 1. Make this function async
-async def start_agent_session(session_id: str, is_audio: bool = True): # Added type hint for session_id, changed is_audio type
+async def start_agent_session(
+    session_id: str,
+    user_sends_audio: bool, # True if user input can be audio
+    client_wants_agent_audio_output: bool # True if client wants audio output from agent
+):
     """Starts an agent session"""
-
+    logger.info(
+        f"Starting agent session {session_id}. User sends audio: {user_sends_audio}, Client wants agent audio: {client_wants_agent_audio_output}"
+    )
     # Create a Session
-    # 2. Await the call to create_session
     session = await session_service.create_session(
         app_name=APP_NAME,
         user_id=session_id,
-        session_id=session_id,
+        session_id=session_id # Using user_id as session_id for simplicity here
     )
-
     # Create a Runner
     runner = Runner(
         app_name=APP_NAME,
-        agent=general_agent,
+        agent=general_agent, # Ensure general_agent is correctly defined and imported
         session_service=session_service,
     )
 
-    # Set response modality
-    modality = "AUDIO" if is_audio else "TEXT"
-
-    # Create speech config with voice settings
-    speech_config = types.SpeechConfig(
-        voice_config=types.VoiceConfig(
-            # Puck, Charon, Kore, Fenrir, Aoede, Leda, Orus, and Zephyr
-            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Kore")
-        )
-    )
-
     # Create run config with basic settings
-    config = {"response_modalities": [modality], "speech_config": speech_config}
+    config: Dict[str, Any] = {}
+    response_modalities = []
 
-    # Add output_audio_transcription when audio is enabled to get both audio and text
-    if is_audio:
+    if client_wants_agent_audio_output:
+        response_modalities.append("AUDIO")
+        # Create speech config with voice settings only if agent audio output is desired
+        speech_config = types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Kore")
+            )
+        )
+        config["speech_config"] = speech_config
+        # If client wants agent audio, ADK can provide transcription of that audio
         config["output_audio_transcription"] = {}
+        logger.info("Agent configured for AUDIO output with transcription.")
+    else:
+        # If client does not want agent audio, agent should only respond with text
+        response_modalities.append("TEXT")
+        logger.info("Agent configured for TEXT output only.")
+    
+    config["response_modalities"] = response_modalities
+
+    # Configure input audio transcription if the user is sending audio
+    if user_sends_audio:
         config["input_audio_transcription"] = {}
+        logger.info("Agent configured for input audio transcription.")
+    else:
+        logger.info("Agent not configured for input audio transcription (user sends text).")
 
     run_config = RunConfig(**config)
+    logger.debug(f"RunConfig: {run_config}")
 
     # Create a LiveRequestQueue for this session
     live_request_queue = LiveRequestQueue()
-
     # Start agent session
     live_events = runner.run_live(
         session=session,
@@ -279,68 +292,65 @@ async def root():
     print("index path:> ",os.path.join(STATIC_DIR, "index.html"))
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
     session_id: str,
-    is_audio: str = Query(...), # is_audio comes as a string "true" or "false"
+    user_sends_audio_str: str = Query(..., alias="is_audio"), # User input mode: "true" or "false"
+    agent_wants_audio_output_str: str = Query("true", alias="agent_wants_audio_output") # Agent output mode
 ):
     """Client websocket endpoint"""
-
-    # Wait for client connection
     await websocket.accept()
-    print(f"Client #{session_id} connected, audio mode: {is_audio}")
+    logger.info(
+        f"Client #{session_id} connected. User sends audio: '{user_sends_audio_str}'. Agent audio output: '{agent_wants_audio_output_str}'"
+    )
 
-    # 4. Convert is_audio string to boolean
-    is_audio_bool = is_audio.lower() == "true"
+    user_sends_audio_bool = user_sends_audio_str.lower() == "true"
+    agent_wants_audio_output_bool = agent_wants_audio_output_str.lower() == "true"
 
     try:
-        # Start agent session
-        # 3. Await the call to start_agent_session and pass the correct is_audio
         live_events, live_request_queue = await start_agent_session(
             session_id,
-            is_audio=is_audio_bool # Pass the boolean value
+            user_sends_audio=user_sends_audio_bool,
+            client_wants_agent_audio_output=agent_wants_audio_output_bool
         )
-        print("Agent session started!!")
-        # Start tasks
+        logger.info(f"Agent session started for client #{session_id}")
+
         agent_to_client_task = asyncio.create_task(
             agent_to_client_messaging(websocket, live_events)
         )
         client_to_agent_task = asyncio.create_task(
             client_to_agent_messaging(websocket, live_request_queue)
         )
-        # Wait for either task to complete (e.g., due to error or disconnect)
+
         done, pending = await asyncio.wait(
             [agent_to_client_task, client_to_agent_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
 
-        # Cancel any pending tasks to ensure they clean up
         for task in pending:
+            logger.info(f"Cancelling pending task: {task.get_name()}")
             task.cancel()
-
-        # Await the cancelled tasks to allow them to finish their cancellation logic
+        
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
+            logger.info("Pending tasks gathered after cancellation.")
 
-        # Check if any of the completed tasks raised an exception
         for task in done:
             if task.exception():
-                logger.error(f"Task {task.get_name()} raised an exception: {task.exception()}")
+                logger.error(f"Task {task.get_name()} raised an exception: {task.exception()}", exc_info=task.exception())
+            else:
+                logger.info(f"Task {task.get_name()} completed.")
 
 
     except Exception as e:
-        logger.error(f"Error in websocket_endpoint for client #{session_id}: {e}")
-        # Attempt to close the websocket gracefully if an error occurs before tasks are set up
-        # or if start_agent_session fails.
+        logger.error(f"Error in websocket_endpoint for client #{session_id}: {e}", exc_info=True)
         try:
             await websocket.close(code=1011) # Internal error
         except RuntimeError: # If already closed
             pass
     finally:
-        # Disconnected
-        print(f"Client #{session_id} disconnected")
+        logger.info(f"Client #{session_id} disconnected")
 
 # Add WebSocketDisconnect to imports if not already there:
 from fastapi import WebSocketDisconnect # Make sure this is imported

@@ -2,9 +2,11 @@
 const sessionId = Math.random().toString().substring(10);
 const ws_url = "ws://" + window.location.host + "/ws/" + sessionId;
 let websocket = null;
-let is_audio = false;
+let is_audio = false; // User input is audio
+let agentWantsAudioOutput = true; // Agent output includes audio
 let currentMessageId = null; // Track the current message ID during a conversation turn
 let currentUserTranscriptionMessageId = null; // Track current USER transcription message ID #ashish
+
 // Get DOM elements
 const messageForm = document.getElementById("messageForm");
 const messageInput = document.getElementById("message");
@@ -15,11 +17,22 @@ const typingIndicator = document.getElementById("typing-indicator");
 const startAudioButton = document.getElementById("startAudioButton");
 const stopAudioButton = document.getElementById("stopAudioButton");
 const recordingContainer = document.getElementById("recording-container");
+const toggleAgentVoiceButton = document.getElementById("toggleAgentVoiceButton");
 
 // WebSocket handlers
 function connectWebsocket() {
+  // If there's an existing websocket, close it before creating a new one
+  if (websocket) {
+    websocket.onclose = () => {}; // Prevent the default onclose handler from firing for this deliberate close
+    websocket.close();
+    websocket = null;
+    console.log("Previous WebSocket connection closed for mode change.");
+  }
+
   // Connect websocket
-  const wsUrl = ws_url + "?is_audio=" + is_audio;
+  const wsQuery = `?is_audio=${is_audio}&agent_wants_audio_output=${agentWantsAudioOutput}`;
+  const wsUrl = ws_url + wsQuery;
+  console.log(`Connecting to WebSocket: ${wsUrl}`);
   websocket = new WebSocket(wsUrl);
 
   // Handle connection open
@@ -28,12 +41,10 @@ function connectWebsocket() {
     console.log("WebSocket connection opened.");
     connectionStatus.textContent = "Connected";
     statusDot.classList.add("connected");
-
     // Enable the Send button
     document.getElementById("sendButton").disabled = false;
     addSubmitHandler();
   };
-
 
   websocket.onmessage = function (event) {
     const message_from_server = JSON.parse(event.data);
@@ -44,9 +55,7 @@ function connectWebsocket() {
     if (message_from_server.role === "user_transcription") {
       typingIndicator.classList.remove("visible"); // Agent isn't "typing" this
       const textData = message_from_server.data;
-
       let transcriptionElem = document.getElementById(currentUserTranscriptionMessageId);
-
       if (!transcriptionElem) { // First part of a new transcription
         const newTranscriptionId = "user-transc-" + Date.now() + Math.random().toString(36).substr(2, 5);
         transcriptionElem = document.createElement("p");
@@ -83,14 +92,15 @@ function connectWebsocket() {
     }
 
     // --- 4. Handle Agent Audio Output ---
-    if (message_from_server.mime_type === "audio/pcm" && audioPlayerNode && message_from_server.role === "model") {
+    if (message_from_server.mime_type === "audio/pcm" && audioPlayerNode && message_from_server.role === "model" && agentWantsAudioOutput) {
       console.log("[AUDIO PLAYER] Received agent audio data. Current agent msg ID:", currentMessageId);
       audioPlayerNode.port.postMessage(base64ToArray(message_from_server.data));
       
       // Attempt to add audio icon to the corresponding text message, if it exists
-      if (currentMessageId) {
+      if (currentMessageId && agentWantsAudioOutput) { // Also check agentWantsAudioOutput here
         const messageElem = document.getElementById(currentMessageId);
-        if (messageElem && !messageElem.querySelector(".audio-icon") && is_audio) {
+        // Check if audio icon already exists to avoid duplicates if audio comes before all text
+        if (messageElem && !messageElem.querySelector(".audio-icon")) { 
           const audioIcon = document.createElement("span");
           audioIcon.className = "audio-icon";
           // Prepend icon. Ensure there's a space if text is already there.
@@ -108,16 +118,14 @@ function connectWebsocket() {
     // --- 5. Handle Agent Text Output ---
     if (message_from_server.mime_type === "text/plain" && message_from_server.role === "model") {
       typingIndicator.classList.remove("visible"); // Hide indicator as text arrives
-
       let messageElem = document.getElementById(currentMessageId);
-
       if (!messageElem) { // First part of a new agent text message
         const newMessageId = "agent-msg-" + Date.now() + Math.random().toString(36).substr(2, 5);
         messageElem = document.createElement("p");
         messageElem.id = newMessageId;
         messageElem.className = "agent-message";
         
-        if (is_audio) { // If audio mode is active, prepend an audio icon placeholder
+        if (agentWantsAudioOutput) { // If agent voice output is enabled, prepend an audio icon placeholder
           const audioIcon = document.createElement("span");
           audioIcon.className = "audio-icon";
           messageElem.appendChild(audioIcon);
@@ -146,7 +154,6 @@ function connectWebsocket() {
     }
   }; // End of websocket.onmessage
 
-
   // Handle connection close
   websocket.onclose = function () {
     console.log("WebSocket connection closed.");
@@ -154,6 +161,7 @@ function connectWebsocket() {
     connectionStatus.textContent = "Disconnected. Reconnecting...";
     statusDot.classList.remove("connected");
     typingIndicator.classList.remove("visible");
+    // This onclose is for unexpected closes, try to reconnect
     setTimeout(function () {
       console.log("Reconnecting...");
       connectWebsocket();
@@ -161,13 +169,14 @@ function connectWebsocket() {
   };
 
   websocket.onerror = function (e) {
-    console.log("WebSocket error: ", e);
+    console.error("WebSocket error: ", e);
     connectionStatus.textContent = "Connection error";
     statusDot.classList.remove("connected");
     typingIndicator.classList.remove("visible");
   };
 }
-connectWebsocket();
+
+connectWebsocket(); // Initial connection
 
 // Add submit handler to the form
 function addSubmitHandler() {
@@ -180,10 +189,8 @@ function addSubmitHandler() {
       p.className = "user-message";
       messagesDiv.appendChild(p);
       messageInput.value = "";
-
       // Show typing indicator after sending message
       typingIndicator.classList.add("visible");
-
       sendMessage({
         mime_type: "text/plain",
         data: message,
@@ -219,7 +226,6 @@ function base64ToArray(base64) {
 /**
  * Audio handling
  */
-
 let audioPlayerNode;
 let audioPlayerContext;
 let audioRecorderNode;
@@ -255,19 +261,16 @@ function stopAudio() {
     audioRecorderNode.disconnect();
     audioRecorderNode = null;
   }
-
   if (audioRecorderContext) {
     audioRecorderContext
       .close()
       .catch((err) => console.error("Error closing audio context:", err));
     audioRecorderContext = null;
   }
-
   if (micStream) {
     micStream.getTracks().forEach((track) => track.stop());
     micStream = null;
   }
-
   isRecording = false;
 }
 
@@ -280,12 +283,10 @@ startAudioButton.addEventListener("click", () => {
   stopAudioButton.style.display = "inline-block";
   recordingContainer.style.display = "flex";
   startAudio();
-  is_audio = true;
-
-  // Add class to messages container to enable audio styling
-  messagesDiv.classList.add("audio-enabled");
-
-  connectWebsocket(); // reconnect with the audio mode
+  is_audio = true; // User input is audio
+  // Add class to messages container to enable audio styling (optional, for specific UI effects)
+  // messagesDiv.classList.add("audio-enabled"); 
+  connectWebsocket(); // reconnect with the new is_audio mode
 });
 
 // Stop audio recording when stop button is clicked
@@ -296,31 +297,28 @@ stopAudioButton.addEventListener("click", () => {
   startAudioButton.disabled = false;
   startAudioButton.textContent = "Enable Voice";
   recordingContainer.style.display = "none";
+  // Remove audio styling class (optional)
+  // messagesDiv.classList.remove("audio-enabled");
+  is_audio = false; // User input is not audio
+  connectWebsocket(); // reconnect with new is_audio mode
+});
 
-  // Remove audio styling class
-  messagesDiv.classList.remove("audio-enabled");
-
-  // Reconnect without audio mode
-  is_audio = false;
-
-  // Only reconnect if the connection is still open
-  if (websocket && websocket.readyState === WebSocket.OPEN) {
-    websocket.close();
-    // The onclose handler will trigger reconnection
-  }
+// Toggle agent voice output button
+toggleAgentVoiceButton.addEventListener("click", () => {
+  agentWantsAudioOutput = !agentWantsAudioOutput;
+  toggleAgentVoiceButton.textContent = agentWantsAudioOutput ? "Agent Voice: ON" : "Agent Voice: OFF";
+  connectWebsocket(); // Reconnect with the new agent voice output preference
 });
 
 // Audio recorder handler
 function audioRecorderHandler(pcmData) {
   // Only send data if we're still recording
   if (!isRecording) return;
-
   // Send the pcm data as base64
   sendMessage({
     mime_type: "audio/pcm",
     data: arrayBufferToBase64(pcmData),
   });
-
   // Log every few samples to avoid flooding the console
   if (Math.random() < 0.01) {
     // Only log ~1% of audio chunks

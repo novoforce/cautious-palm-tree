@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-
 <body>
   <header>
     <h1>Serena Voice Assistant</h1>
@@ -25,7 +23,6 @@
       </div>
     </div>
   </header>
-
   <div class="chat-container">
     <div id="messages">
       <div id="typing-indicator" class="typing-indicator">
@@ -34,14 +31,13 @@
         <span></span>
       </div>
     </div>
-
     <form id="messageForm">
       <input type="text" id="message" name="message" placeholder="Type your message here..." autocomplete="off" />
       <button type="submit" id="sendButton" disabled>Send</button>
       <button type="button" id="startAudioButton">Enable Voice</button>
-      <button type="button" id="stopAudioButton">Stop Voice</button>
+      <button type="button" id="stopAudioButton" style="display: none;">Stop Voice</button>
+      <button type="button" id="toggleAgentVoiceButton">Agent Voice: ON</button>
     </form>
   </div>
 </body>
-
 </html>
