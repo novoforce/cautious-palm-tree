@@ -12,7 +12,7 @@ const ws_url = "ws://" + window.location.host + "/ws/" + sessionId;
 let websocket = null;
 let is_audio = false;
 let currentMessageId = null; // Track the current message ID during a conversation turn
-
+let currentUserTranscriptionMessageId = null; // Track current USER transcription message ID #ashish
 // Get DOM elements
 const messageForm = document.getElementById("messageForm");
 const messageInput = document.getElementById("message");
@@ -43,106 +43,218 @@ function connectWebsocket() {
   };
 
   // Handle incoming messages
-  websocket.onmessage = function (event) {
-    // Parse the incoming message
-    const message_from_server = JSON.parse(event.data);
-    console.log("[AGENT TO CLIENT] ", message_from_server);
+  // websocket.onmessage = function (event) {
+  //   // Parse the incoming message
+  //   const message_from_server = JSON.parse(event.data);
+  //   console.log("[AGENT TO CLIENT] ", message_from_server);
 
-    // Show typing indicator for first message in a response sequence,
-    // but not for turn_complete messages
+  //   // Show typing indicator for first message in a response sequence,
+  //   // but not for turn_complete messages
+  //   if (
+  //     !message_from_server.turn_complete &&
+  //     (message_from_server.mime_type === "text/plain" ||
+  //       message_from_server.mime_type === "audio/pcm")
+  //   ) {
+  //     typingIndicator.classList.add("visible");
+  //   }
+
+  //   // Check if the turn is complete
+  //   if (
+  //     message_from_server.turn_complete &&
+  //     message_from_server.turn_complete === true
+  //   ) {
+  //     // Reset currentMessageId to ensure the next message gets a new element
+  //     currentMessageId = null;
+  //     typingIndicator.classList.remove("visible");
+  //     return;
+  //   }
+
+  //   // If it's audio, play it
+  //   if (message_from_server.mime_type === "audio/pcm" && audioPlayerNode) {
+  //     audioPlayerNode.port.postMessage(base64ToArray(message_from_server.data));
+
+  //     // If we have an existing message element for this turn, add audio icon if needed
+  //     if (currentMessageId) {
+  //       const messageElem = document.getElementById(currentMessageId);
+  //       if (
+  //         messageElem &&
+  //         !messageElem.querySelector(".audio-icon") &&
+  //         is_audio
+  //       ) {
+  //         const audioIcon = document.createElement("span");
+  //         audioIcon.className = "audio-icon";
+  //         messageElem.prepend(audioIcon);
+  //       }
+  //     }
+  //   }
+
+  //   // Handle text messages
+  //   if (message_from_server.mime_type === "text/plain") {
+  //     // Hide typing indicator
+  //     typingIndicator.classList.remove("visible");
+
+  //     const role = message_from_server.role || "model";
+
+  //     // If we already have a message element for this turn, append to it
+  //     if (currentMessageId && role === "model") {
+  //       const existingMessage = document.getElementById(currentMessageId);
+  //       if (existingMessage) {
+  //         // Append the text without adding extra spaces
+  //         // Use a span element to maintain proper text flow
+  //         const textNode = document.createTextNode(message_from_server.data);
+  //         existingMessage.appendChild(textNode);
+
+  //         // Scroll to the bottom
+  //         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  //         return;
+  //       }
+  //     }
+
+  //     // Create a new message element if it's a new turn or user message
+  //     const messageId = Math.random().toString(36).substring(7);
+  //     const messageElem = document.createElement("p");
+  //     messageElem.id = messageId;
+
+  //     // Set class based on role
+  //     messageElem.className =
+  //       role === "user" ? "user-message" : "agent-message";
+
+  //     // Add audio icon for model messages if audio is enabled
+  //     if (is_audio && role === "model") {
+  //       const audioIcon = document.createElement("span");
+  //       audioIcon.className = "audio-icon";
+  //       messageElem.appendChild(audioIcon);
+  //     }
+
+  //     // Add the text content
+  //     messageElem.appendChild(
+  //       document.createTextNode(message_from_server.data)
+  //     );
+
+  //     // Add the message to the DOM
+  //     messagesDiv.appendChild(messageElem);
+
+  //     // Remember the ID of this message for subsequent responses in this turn
+  //     if (role === "model") {
+  //       currentMessageId = messageId;
+  //     }
+
+  //     // Scroll to the bottom
+  //     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  //   }
+  // };
+
+  websocket.onmessage = function (event) {
+    const message_from_server = JSON.parse(event.data);
+    // console.log("[AGENT TO CLIENT] RAW: ", event.data); // For deep debugging if JSON parsing fails
+    // console.log("[AGENT TO CLIENT] Parsed: ", message_from_server); // General log for received message
+
+    // --- 1. Handle User Transcription ---
+    if (message_from_server.role === "user_transcription") {
+      typingIndicator.classList.remove("visible"); // Agent isn't "typing" this
+      const textData = message_from_server.data;
+
+      let transcriptionElem = document.getElementById(currentUserTranscriptionMessageId);
+
+      if (!transcriptionElem) { // First part of a new transcription
+        const newTranscriptionId = "user-transc-" + Date.now() + Math.random().toString(36).substr(2, 5);
+        transcriptionElem = document.createElement("p");
+        transcriptionElem.id = newTranscriptionId;
+        transcriptionElem.className = "user-message"; // Style like other user messages
+        
+        transcriptionElem.appendChild(document.createTextNode(textData)); // Append first chunk
+        
+        messagesDiv.appendChild(transcriptionElem);
+        currentUserTranscriptionMessageId = newTranscriptionId;
+      } else { // Subsequent part, append to existing element's text
+        transcriptionElem.appendChild(document.createTextNode(textData)); // Append new chunk
+      }
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      return; // Processed user transcription, exit this handler invocation
+    }
+
+    // --- 2. Show Typing Indicator for Model's activity (if not turn complete) ---
     if (
-      !message_from_server.turn_complete &&
-      (message_from_server.mime_type === "text/plain" ||
-        message_from_server.mime_type === "audio/pcm")
+      !message_from_server.turn_complete && // Must not be turn_complete
+      message_from_server.role === "model" && // Only for model's own messages/audio
+      (message_from_server.mime_type === "text/plain" || message_from_server.mime_type === "audio/pcm")
     ) {
       typingIndicator.classList.add("visible");
     }
 
-    // Check if the turn is complete
-    if (
-      message_from_server.turn_complete &&
-      message_from_server.turn_complete === true
-    ) {
-      // Reset currentMessageId to ensure the next message gets a new element
-      currentMessageId = null;
+    // --- 3. Handle Turn Completion ---
+    if (message_from_server.turn_complete === true || message_from_server.interrupted === true) { // Check both
+      currentMessageId = null; // Reset for agent's next text response
+      currentUserTranscriptionMessageId = null; // Reset for user's next transcription
       typingIndicator.classList.remove("visible");
-      return;
+      console.log("[TURN] Complete or Interrupted.");
+      return; // Processed turn_complete or interrupted, exit
     }
 
-    // If it's audio, play it
-    if (message_from_server.mime_type === "audio/pcm" && audioPlayerNode) {
+    // --- 4. Handle Agent Audio Output ---
+    if (message_from_server.mime_type === "audio/pcm" && audioPlayerNode && message_from_server.role === "model") {
+      console.log("[AUDIO PLAYER] Received agent audio data. Current agent msg ID:", currentMessageId);
       audioPlayerNode.port.postMessage(base64ToArray(message_from_server.data));
-
-      // If we have an existing message element for this turn, add audio icon if needed
+      
+      // Attempt to add audio icon to the corresponding text message, if it exists
       if (currentMessageId) {
         const messageElem = document.getElementById(currentMessageId);
-        if (
-          messageElem &&
-          !messageElem.querySelector(".audio-icon") &&
-          is_audio
-        ) {
+        if (messageElem && !messageElem.querySelector(".audio-icon") && is_audio) {
           const audioIcon = document.createElement("span");
           audioIcon.className = "audio-icon";
-          messageElem.prepend(audioIcon);
+          // Prepend icon. Ensure there's a space if text is already there.
+          if (messageElem.firstChild) {
+            messageElem.insertBefore(audioIcon, messageElem.firstChild);
+            messageElem.insertBefore(document.createTextNode(" "), audioIcon.nextSibling);
+          } else {
+            messageElem.appendChild(audioIcon);
+            messageElem.appendChild(document.createTextNode(" "));
+          }
         }
       }
     }
 
-    // Handle text messages
-    if (message_from_server.mime_type === "text/plain") {
-      // Hide typing indicator
-      typingIndicator.classList.remove("visible");
+    // --- 5. Handle Agent Text Output ---
+    if (message_from_server.mime_type === "text/plain" && message_from_server.role === "model") {
+      typingIndicator.classList.remove("visible"); // Hide indicator as text arrives
 
-      const role = message_from_server.role || "model";
+      let messageElem = document.getElementById(currentMessageId);
 
-      // If we already have a message element for this turn, append to it
-      if (currentMessageId && role === "model") {
-        const existingMessage = document.getElementById(currentMessageId);
-        if (existingMessage) {
-          // Append the text without adding extra spaces
-          // Use a span element to maintain proper text flow
-          const textNode = document.createTextNode(message_from_server.data);
-          existingMessage.appendChild(textNode);
-
-          // Scroll to the bottom
-          messagesDiv.scrollTop = messagesDiv.scrollHeight;
-          return;
+      if (!messageElem) { // First part of a new agent text message
+        const newMessageId = "agent-msg-" + Date.now() + Math.random().toString(36).substr(2, 5);
+        messageElem = document.createElement("p");
+        messageElem.id = newMessageId;
+        messageElem.className = "agent-message";
+        
+        if (is_audio) { // If audio mode is active, prepend an audio icon placeholder
+          const audioIcon = document.createElement("span");
+          audioIcon.className = "audio-icon";
+          messageElem.appendChild(audioIcon);
+          messageElem.appendChild(document.createTextNode(" ")); // Space after icon
         }
+        
+        messageElem.appendChild(document.createTextNode(message_from_server.data)); // Add first text chunk
+        messagesDiv.appendChild(messageElem);
+        currentMessageId = newMessageId; // Set current ID for subsequent appends
+      } else { // Subsequent part, append to existing agent message element
+        messageElem.appendChild(document.createTextNode(message_from_server.data)); // Append new text chunk
       }
-
-      // Create a new message element if it's a new turn or user message
-      const messageId = Math.random().toString(36).substring(7);
-      const messageElem = document.createElement("p");
-      messageElem.id = messageId;
-
-      // Set class based on role
-      messageElem.className =
-        role === "user" ? "user-message" : "agent-message";
-
-      // Add audio icon for model messages if audio is enabled
-      if (is_audio && role === "model") {
-        const audioIcon = document.createElement("span");
-        audioIcon.className = "audio-icon";
-        messageElem.appendChild(audioIcon);
-      }
-
-      // Add the text content
-      messageElem.appendChild(
-        document.createTextNode(message_from_server.data)
-      );
-
-      // Add the message to the DOM
-      messagesDiv.appendChild(messageElem);
-
-      // Remember the ID of this message for subsequent responses in this turn
-      if (role === "model") {
-        currentMessageId = messageId;
-      }
-
-      // Scroll to the bottom
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-  };
+    
+    // --- 6. Handle System Error Messages from Backend ---
+    if (message_from_server.role === "system" && message_from_server.error) {
+        console.error("Error from server:", message_from_server.error);
+        const errorElem = document.createElement("p");
+        errorElem.className = "error-message"; // You might want to style this class
+        errorElem.textContent = "System Error: " + message_from_server.error;
+        messagesDiv.appendChild(errorElem);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        typingIndicator.classList.remove("visible");
+        return;
+    }
+  }; // End of websocket.onmessage
+
 
   // Handle connection close
   websocket.onclose = function () {
