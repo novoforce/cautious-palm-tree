@@ -1,0 +1,497 @@
+{
+    "dataset_id": "StyleHub",
+    "tables": [
+        {
+            "table_name": "distribution_centers",
+            "table_description": "The Look fictitious e-commerce dataset: distribution_centers table",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "name",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "latitude",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "longitude",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "distribution_center_geom",
+                    "column_type": "GEOGRAPHY",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        },
+        {
+            "table_name": "events",
+            "table_description": "Programatically generated web events for The Look fictitious e-commerce store",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "user_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "sequence_number",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "session_id",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "created_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "ip_address",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "city",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "state",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "postal_code",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "browser",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "traffic_source",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "uri",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "event_type",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        },
+        {
+            "table_name": "inventory_items",
+            "table_description": "Programatically generated inventory for The Look fictitious e-commerce store",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "created_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "sold_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "cost",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_category",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_name",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_brand",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_retail_price",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_department",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_sku",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_distribution_center_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        },
+        {
+            "table_name": "order_items",
+            "table_description": "Programatically generated order items for The Look fictitious e-commerce store",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "order_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "user_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "product_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "inventory_item_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "status",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "created_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "shipped_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "delivered_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "returned_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "sale_price",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        },
+        {
+            "table_name": "orders",
+            "table_description": "Programatically generated orders for The Look fictitious e-commerce store",
+            "columns": [
+                {
+                    "column_name": "order_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "user_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "status",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "gender",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "created_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "returned_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "shipped_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "delivered_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "num_of_item",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        },
+        {
+            "table_name": "products",
+            "table_description": "The Look fictitious e-commerce dataset - products table",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "cost",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "category",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "name",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "brand",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "retail_price",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "department",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "sku",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "distribution_center_id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        },
+        {
+            "table_name": "users",
+            "table_description": "Programatically generated users for The Look fictitious e-commerce store",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "first_name",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "last_name",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "email",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "age",
+                    "column_type": "INTEGER",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "gender",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "state",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "street_address",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "postal_code",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "city",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "country",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "latitude",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "longitude",
+                    "column_type": "FLOAT",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "traffic_source",
+                    "column_type": "STRING",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "created_at",
+                    "column_type": "TIMESTAMP",
+                    "column_description": "",
+                    "is_primary_key": false
+                },
+                {
+                    "column_name": "user_geom",
+                    "column_type": "GEOGRAPHY",
+                    "column_description": "",
+                    "is_primary_key": false
+                }
+            ]
+        }
+    ]
+}
