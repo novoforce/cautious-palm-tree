@@ -1,6 +1,9 @@
 from google.adk.agents import Agent, LoopAgent, SequentialAgent
 from app.core.dependencies import get_bigquery_reader
-from app.services.agents.agents_tools import get_similar_tables_tool, exit_loop, say_hello, say_goodbye
+from app.services.agents.agents_tools import get_similar_tables_tool, exit_loop,call_external_tell_time_agent,call_external_greeting_agent 
+
+from google.adk.tools.function_tool import FunctionTool # Import FunctionTool
+
 
 bq_rdr= get_bigquery_reader()
 MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-live-001"
@@ -182,7 +185,7 @@ root_weather_agent = Agent(
     ),
     tools=[get_weather, get_current_time],)
 
-general_greeting_agent = Agent(
+general_greeting_agent1 = Agent(
     name="general_greeting_agent",
     model=MODEL_GEMINI_2_0_FLASH,
     description=(
@@ -192,3 +195,54 @@ general_greeting_agent = Agent(
         """You are a helpful agent who can answer user questions and have a great open conversation.
         You can speak in English, Hindi, or any other language."""
     ),)
+
+general_greeting_agent = Agent(
+    name="serena_orchestrator_agent", # Renamed for clarity
+    model=MODEL_GEMINI_2_0_FLASH,
+    description=(
+        "General conversational agent for SERENA. Can answer general questions, "
+        "interact with BigQuery, and delegate to specialized A2A agents for time and greetings."
+    ),
+    instruction=(
+        """You are SERENA, a helpful and versatile voice assistant.
+        You have the following capabilities:
+        1.  Engage in general conversation.
+        2.  Answer questions about BigQuery databases using the 'root_sql_agent'.
+        3.  Tell the current time by using the 'call_external_tell_time_agent' tool.
+        4.  Provide poetic greetings by using the 'call_external_greeting_agent' tool.
+
+        Analyze the user's request:
+        - If the user asks for the current time (e.g., "What time is it?"), use the 'call_external_tell_time_agent' tool with the user's exact query.
+        - If the user asks for a greeting, especially a poetic one (e.g., "Greet me", "Say hello poetically"), use the 'call_external_greeting_agent' tool with the user's exact query.
+        - For database queries (e.g., "How many users?", "Show me orders"), delegate to the 'root_sql_agent'.
+        - For other general conversation, respond naturally.
+        When using a tool, pass the user's original relevant query as the message to the tool.
+        """
+    ),
+    tools=[
+        FunctionTool(call_external_tell_time_agent),
+        FunctionTool(call_external_greeting_agent),
+        # bq_rdr.list_tables_in_dataset, # Keep if direct BigQuery tools are still desired at this level
+    ],
+    sub_agents=[
+        general_agent # For BigQuery tasks
+    ]
+    # output_key="final_response" # Optional: if you want to explicitly name the output
+)
+
+# Ensure this is the agent used in app/main.py:
+# general_agent = general_greeting_agent # If you rename it back or use an alias
+# Or, if you keep general_greeting_agent as is and create a new orchestrator, use that.
+
+# You might want to simplify general_greeting_agent if it's ONLY for simple chat
+# and create a new top-level orchestrator:
+# For example:
+# simple_greeting_agent = Agent(name="simple_greeting_agent", ...)
+# serena_main_orchestrator = Agent(
+#    name="serena_main_orchestrator",
+#    tools=[... call_external_tell_time_agent, call_external_greeting_agent],
+#    sub_agents=[root_sql_agent, simple_greeting_agent],
+#    instruction="Orchestrate between sub_agents and tools..."
+# )
+# And then in app/main.py, use `serena_main_orchestrator`.
+# For now, we've modified general_greeting_agent to take on this role.
