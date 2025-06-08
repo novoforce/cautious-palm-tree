@@ -181,3 +181,14 @@ root_weather_agent = Agent(
         "You are a helpful agent who can answer user questions about the time and weather in a city."
     ),
     tools=[get_weather, get_current_time],)
+
+general_greeting_agent = Agent(
+    name="general_greeting_agent",
+    model=MODEL_GEMINI_2_0_FLASH,
+    description=(
+        "Agent to answer questions relating to user general query"
+    ),
+    instruction=(
+        """You are a helpful agent who can answer user questions and have a great open conversation.
+        You can speak in English, Hindi, or any other language."""
+    ),)

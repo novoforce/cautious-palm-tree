@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.services.agents.agents import general_agent, root_weather_agent
+from app.services.agents.agents import general_agent, root_weather_agent,general_greeting_agent
 import os, json, base64, asyncio
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.adk.runners import Runner
@@ -46,7 +46,7 @@ async def start_agent_session(
     # Create a Runner
     runner = Runner(
         app_name=APP_NAME,
-        agent=general_agent, # Ensure general_agent is correctly defined and imported
+        agent=general_greeting_agent, # Ensure general_agent is correctly defined and imported
         session_service=session_service,
     )
 
