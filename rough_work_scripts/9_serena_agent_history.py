@@ -28,9 +28,9 @@ import plotly.io as pio
 # --- Environment and Logging Setup ---
 MODEL_GEMINI_FLASH = "gemini-2.0-flash-001"
 # IMPORTANT: Replace these dummy paths with your actual file paths
-SA_KEY_PATH = r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\hackathon-agents-044c975e8972.json"
+SA_KEY_PATH = r"..\hackathon-agents-044c975e8972.json"
 DATASET_INFO_PATH = (
-    r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\dataset_info.json"
+    r"..\dataset_info.json"
 )
 EMAIL_SA_KEY_PATH = r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\rough_work_scripts\hackathon-agents-f18a9f8dc92b.json"
 
