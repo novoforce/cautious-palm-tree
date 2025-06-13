@@ -5,6 +5,9 @@ from google.cloud.exceptions import NotFound, GoogleCloudError
 import logging
 import traceback
 import os
+MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-live-001"
+MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-001"  # Use the latest flash model available
+
 logging.basicConfig(
     level=logging.INFO,  # Changed to INFO for better visibility of service operations
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -324,7 +327,7 @@ async def generate_image(prompt: str, tool_context: 'ToolContext'):
   }
   
 image_generator_agent = LlmAgent(
-    model='gemini-2.0-flash-001',
+    model=MODEL_GEMINI_2_0_FLASH, #'gemini-2.0-flash-001',
     name='root_agent',
     description="""An agent that generates images and answer questions about the images.""",
     instruction="""You are an agent whose job is to generate or edit an image based on the user's prompt.
@@ -339,7 +342,7 @@ image_generator_agent = LlmAgent(
 #GREETING AGENT-------------------------------------------------------START>
 general_greeting_agent = LlmAgent(
     name="general_greeting_agent",
-    model="gemini-2.5-flash-preview-04-17",
+    model=MODEL_GEMINI_2_0_FLASH, #"gemini-2.5-flash-preview-04-17",
     description=(
         "Agent to answer questions relating to user general query"
     ),
@@ -355,7 +358,7 @@ greeting_tool = agent_tool.AgentTool(agent=general_greeting_agent)
 #VISUALIZATION AGENT-------------------------------------------------------START>
 chart_type_agent = LlmAgent(
     name="visualization_agent",
-    model="gemini-2.5-flash-preview-04-17", #{query_understanding_output}
+    model=MODEL_GEMINI_2_0_FLASH,#"gemini-2.5-flash-preview-04-17", #{query_understanding_output}
     description=(
         "Agent to predict the chart type and the design of the chart based on the user query and the data provided."
     ),
@@ -363,58 +366,7 @@ chart_type_agent = LlmAgent(
         """You are a chart type agent who can predict the chart type and the design of the chart based on the user query and the data provided. You will be provided with the User query and the data in the form of a JSON object.
         You need to analyze the data and the user query to predict the chart type and the design of the chart. You can use the following chart types: bar, line, pie, scatter, area, histogram, boxplot, heatmap, radar, treemap, funnel, waterfall, gauge, bullet, polar, sunburst, chord, sankey.
         #User Query: "Users who ordered the most"
-        #Data: ```[
-  {
-    "user_id": 1,
-    "user_name": "Alice",
-    "order_count": 15
-  },
-  {
-    "user_id": 2,
-    "user_name": "Bob",
-    "order_count": 22
-  },
-  {
-    "user_id": 3,
-    "user_name": "Charlie",
-    "order_count": 9
-  },
-  {
-    "user_id": 4,
-    "user_name": "David",
-    "order_count": 34
-  },
-  {
-    "user_id": 5,
-    "user_name": "Eve",
-    "order_count": 19
-  },
-  {
-    "user_id": 6,
-    "user_name": "Frank",
-    "order_count": 27
-  },
-  {
-    "user_id": 7,
-    "user_name": "Grace",
-    "order_count": 5
-  },
-  {
-    "user_id": 8,
-    "user_name": "Hannah",
-    "order_count": 30
-  },
-  {
-    "user_id": 9,
-    "user_name": "Ivy",
-    "order_count": 12
-  },
-  {
-    "user_id": 10,
-    "user_name": "Jack",
-    "order_count": 8
-  }
-]```
+        #Data: ```{query_execution_output}```
 
         """
     ),
@@ -423,7 +375,7 @@ chart_type_agent = LlmAgent(
 
 plotly_code_agent = LlmAgent(
     name="plotly_code_agent",
-    model="gemini-2.5-flash-preview-04-17",
+    model=MODEL_GEMINI_2_0_FLASH,#"gemini-2.5-flash-preview-04-17",
     description=(
         "Agent to generate plotly code for the chart type and design predicted by the chart type agent."
     ),
@@ -431,59 +383,8 @@ plotly_code_agent = LlmAgent(
         """You are a plotly code agent who can generate plotly code for the chart type and design predicted by the chart type agent. You will be provided with the chart type and the design of the chart.
         You need to generate the plotly code for the chart type and the design of the chart. 
         The final plotly code should save the chart as a PNG image and return the image path.
-        #Chart Type: {chart_type_output}
-        #Data: ```[
-  {
-    "user_id": 1,
-    "user_name": "Alice",
-    "order_count": 15
-  },
-  {
-    "user_id": 2,
-    "user_name": "Bob",
-    "order_count": 22
-  },
-  {
-    "user_id": 3,
-    "user_name": "Charlie",
-    "order_count": 9
-  },
-  {
-    "user_id": 4,
-    "user_name": "David",
-    "order_count": 34
-  },
-  {
-    "user_id": 5,
-    "user_name": "Eve",
-    "order_count": 19
-  },
-  {
-    "user_id": 6,
-    "user_name": "Frank",
-    "order_count": 27
-  },
-  {
-    "user_id": 7,
-    "user_name": "Grace",
-    "order_count": 5
-  },
-  {
-    "user_id": 8,
-    "user_name": "Hannah",
-    "order_count": 30
-  },
-  {
-    "user_id": 9,
-    "user_name": "Ivy",
-    "order_count": 12
-  },
-  {
-    "user_id": 10,
-    "user_name": "Jack",
-    "order_count": 8
-  }
-]```
+        #Chart Type: ```{chart_type_output}```
+        #Data: ```{query_execution_output}```
 """
 ),
     output_key="plotly_code_output",
@@ -515,7 +416,7 @@ async def execute_plotly_code_and_get_image_bytes(plotly_code_str: str,tool_cont
   }
 
 plotly_code_executor_agent = LlmAgent(
-    model='gemini-2.0-flash-001',
+    model=MODEL_GEMINI_2_0_FLASH,#'gemini-2.0-flash-001',
     name='plotly_code_executor_agent',
     description="""An agent that executes Plotly code and generates an image from it.""",
     instruction="""Use `execute_plotly_code_and_get_image_bytes` tool to execute the Plotly code and generate an image.
@@ -534,9 +435,38 @@ visualization_agent = SequentialAgent(
 )
 
 
+
+# Below is a working example but fails in authentication:> 
+from google.adk.tools.application_integration_tool.application_integration_toolset import ApplicationIntegrationToolset
+sa_key_file_path =r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\rough_work_scripts\hackathon-agents-f18a9f8dc92b.json"
+
+# Read the entire file content into a string
+with open(sa_key_file_path, 'r') as f:
+    sa_key_string = f.read()
+    print("key:> ",sa_key_string)
+
+
+
+email_tool = ApplicationIntegrationToolset(
+    project="hackathon-agents", # TODO: replace with GCP project of the connection
+    location="us-central1", #TODO: replace with location of the connection
+    integration="sendEmailAshish", #TODO: replace with integration name
+    triggers=["api_trigger/sendEmailAshish_API_1"],#TODO: replace with trigger id(s). Empty list would mean all api triggers in the integration to be considered. 
+    service_account_json=sa_key_string, #optional. Stringified json for service account key
+    tool_name_prefix="send email",
+    tool_instructions="Use this tool to send email using the integration",
+)
+
+email_agent = LlmAgent(
+    model=MODEL_GEMINI_2_0_FLASH,#'gemini-2.0-flash',
+    name='connector_agent',
+    instruction="Use `email_tool` to send emails.",
+    tools=[email_tool],
+)
+
 coordinator = LlmAgent(
     name="HelpDeskCoordinator",
-    model="gemini-2.5-flash-preview-04-17",
+    model=MODEL_GEMINI_2_0_FLASH,#"gemini-2.5-flash-preview-04-17",
     instruction="""
     You are an intelligent agent who routes the requests to the appropriate sub-agents based on the user query.
     Your primary task is to route the requests to the appropriate sub-agents based on the user query.
@@ -545,13 +475,15 @@ coordinator = LlmAgent(
     'sql_pipeline_agent': Handles SQL query generation, review, and execution.
     'image_generator_agent' tool: Handles image generation requests.
     'greeting_tool': Handles general user queries and greetings.
+    'email_agent': Handles email sending requests from the user.
+    'visualization_agent': Handles data visualization requests.
     You should analyze the user query and determine which sub-agent is best suited to handle it.
     
     """,
     description="Main Customer data platform(CDP) help desk router.",
     tools = [greeting_tool],
-    sub_agents=[sql_pipeline_agent, image_generator_agent, visualization_agent]
+    sub_agents=[sql_pipeline_agent, image_generator_agent, visualization_agent, email_agent]
 )
 
 # For ADK tools compatibility, the root agent must be named `root_agent`
-root_agent = coordinator
+root_agent = coordinator #<--------------------------------------important to note that this is the root agent for ADK tools compatibility
