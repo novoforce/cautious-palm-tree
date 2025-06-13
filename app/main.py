@@ -46,7 +46,7 @@ async def start_agent_session(
     # Create a Runner
     runner = Runner(
         app_name=APP_NAME,
-        agent=general_greeting_agent, # Ensure general_agent is correctly defined and imported
+        agent=general_agent, # Ensure general_agent is correctly defined and imported
         session_service=session_service,
     )
 
