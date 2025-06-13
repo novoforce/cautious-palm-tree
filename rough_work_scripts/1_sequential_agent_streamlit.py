@@ -18,7 +18,8 @@ load_dotenv()
 APP_NAME = "code_pipeline_app"
 USER_ID = "dev_user_01"
 # Using a known valid model. Change if "gemini-2.0-flash" is specifically needed and available.
-GEMINI_MODEL = "gemini-1.5-flash-latest"
+GEMINI_MODEL = "gemini-2.0-flash-live-001"
+GEMINI_MODEL = "gemini-2.0-flash-001" # Use the latest flash model available
 
 # Streamlit session state keys
 ST_RESULTS_KEY = 'pipeline_results'
