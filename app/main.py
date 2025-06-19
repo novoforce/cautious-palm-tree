@@ -7,8 +7,7 @@ import logging
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.services.agents.agents import general_agent, root_weather_agent,general_greeting_agent
-from app.services.test_agent.agent import root_agent
+from app.services.root_agent.agent import supervisor
 import os, json, base64, asyncio
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.adk.artifacts import InMemoryArtifactService
@@ -49,7 +48,7 @@ async def start_agent_session(
     # Create a Runner
     runner = Runner(
         app_name=APP_NAME,
-        agent=root_agent, #general_agent, #root_agent, #general_agent, # Ensure general_agent is correctly defined and imported
+        agent=supervisor, #general_agent, #root_agent, #general_agent, # Ensure general_agent is correctly defined and imported
         session_service=session_service,
         artifact_service=artifact_service
     )
@@ -98,7 +97,6 @@ async def start_agent_session(
     return live_events, live_request_queue
 
 
-#<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ASHISH working version new >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 async def agent_to_client_messaging(
     websocket: WebSocket, live_events: AsyncIterable[Event | None]
 ):
@@ -146,7 +144,7 @@ async def agent_to_client_messaging(
                 
                 for i, part in enumerate(event.content.parts):
                     # Log details of each part for debugging
-                    logger.info(f"[ADK_EVENT_PART_{i}] EventContentRole: '{event_content_role}', PartType: {type(part)}, PartDetails: {part}")
+                    # logger.info(f"[ADK_EVENT_PART_{i}] EventContentRole: '{event_content_role}', PartType: {type(part)}, PartDetails: {part}")
 
                     if not isinstance(part, types.Part):
                         logger.warning(f"Part {i} is not an instance of types.Part. Skipping.")

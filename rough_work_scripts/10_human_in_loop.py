@@ -10,7 +10,7 @@ from google.adk.tools import LongRunningFunctionTool
 from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
 from dotenv import load_dotenv
-
+from google.adk.tools.agent_tool import AgentTool
 # --- Constants ---
 APP_NAME = "human_in_the_loop_app"
 USER_ID = "dev_user_02"
