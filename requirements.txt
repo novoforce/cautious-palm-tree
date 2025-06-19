@@ -5,3 +5,7 @@ pydantic-settings
 chromadb
 google-adk
 litellm
+streamlit
+google-cloud-aiplatform
+plotly
+nbformat

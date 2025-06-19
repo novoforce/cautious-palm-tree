@@ -11,6 +11,7 @@ from app.services.agents.agents import general_agent, root_weather_agent,general
 from app.services.test_agent.agent import root_agent
 import os, json, base64, asyncio
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
+from google.adk.artifacts import InMemoryArtifactService
 from google.adk.runners import Runner
 from google.adk.events.event import Event
 from google.genai import types
@@ -28,6 +29,7 @@ logger = logging.getLogger("fastapi_app")
 
 APP_NAME = "Serena Agent"
 session_service = InMemorySessionService()
+artifact_service = InMemoryArtifactService() # Placeholder for artifact service, if needed later
 
 async def start_agent_session(
     session_id: str,
@@ -49,6 +51,7 @@ async def start_agent_session(
         app_name=APP_NAME,
         agent=root_agent, #general_agent, #root_agent, #general_agent, # Ensure general_agent is correctly defined and imported
         session_service=session_service,
+        artifact_service=artifact_service
     )
 
     # Create run config with basic settings

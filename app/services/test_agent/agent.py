@@ -6,7 +6,8 @@ import logging
 import traceback
 import os
 MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-live-001"
-MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-001"  # Use the latest flash model available
+
+# MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-001"  # Use the latest flash model available
 
 logging.basicConfig(
     level=logging.INFO,  # Changed to INFO for better visibility of service operations
@@ -464,7 +465,33 @@ email_agent = LlmAgent(
     tools=[email_tool],
 )
 
-coordinator = LlmAgent(
+# coordinator = LlmAgent(
+#     name="HelpDeskCoordinator",
+#     model=MODEL_GEMINI_2_0_FLASH,#"gemini-2.5-flash-preview-04-17",
+#     instruction="""
+#     You are an intelligent agent who routes the requests to the appropriate sub-agents based on the user query.
+#     Your primary task is to route the requests to the appropriate sub-agents based on the user query.
+#     You will receive a user query and you need to analyze it to determine the best sub-agent to handle it.
+#     You can use the following sub-agents to handle different types of requests:
+#     'sql_pipeline_agent': Handles SQL query generation, review, and execution.
+#     'image_generator_agent' tool: Handles image generation requests.
+#     'greeting_tool': Handles general user queries and greetings.
+#     'email_agent': Handles email sending requests from the user.
+#     'visualization_agent': Handles data visualization requests.
+#     You should analyze the user query and determine which sub-agent is best suited to handle it.
+    
+#     """,
+#     description="Main Customer data platform(CDP) help desk router.",
+#     tools = [greeting_tool],
+#     sub_agents=[sql_pipeline_agent, image_generator_agent, visualization_agent, email_agent]
+# )
+
+sql_pipeline_agent_tool = agent_tool.AgentTool(agent=sql_pipeline_agent)
+image_generator_agent_tool = agent_tool.AgentTool(agent=image_generator_agent)
+visualization_agent_tool = agent_tool.AgentTool(agent=visualization_agent)
+email_agent_tool = agent_tool.AgentTool(agent=email_agent)
+
+coordinator1 = LlmAgent(
     name="HelpDeskCoordinator",
     model=MODEL_GEMINI_2_0_FLASH,#"gemini-2.5-flash-preview-04-17",
     instruction="""
@@ -481,9 +508,10 @@ coordinator = LlmAgent(
     
     """,
     description="Main Customer data platform(CDP) help desk router.",
-    tools = [greeting_tool],
-    sub_agents=[sql_pipeline_agent, image_generator_agent, visualization_agent, email_agent]
+    tools = [greeting_tool,sql_pipeline_agent_tool,image_generator_agent_tool,visualization_agent_tool,email_agent_tool],
+    # sub_agents=[sql_pipeline_agent, image_generator_agent, visualization_agent, email_agent]
 )
 
+
 # For ADK tools compatibility, the root agent must be named `root_agent`
-root_agent = coordinator #<--------------------------------------important to note that this is the root agent for ADK tools compatibility
+root_agent = coordinator1 #<--------------------------------------important to note that this is the root agent for ADK tools compatibility
