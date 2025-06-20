@@ -10,13 +10,6 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from app.services.greeting_agent.agent import execute_greeting
-from app.services.bq_agent.agent import execute_sql_pipeline
-from app.services.visualization_agent.agent import execute_visualization_pipeline
-from app.services.poster_agent.agent import execute_poster_pipeline
-
-
-
 
 # --- Constants ---
 APP_NAME = "code_pipeline_module_app"
@@ -294,10 +287,6 @@ async def monitor_stock_price(stock_symbol: str) -> AsyncGenerator[str, None]:
   yield price_alert1
   print(price_alert1)
 
-# from google.adk.agents import LlmAgent, Function
-from google.adk.tools.agent_tool import AgentTool
-
-
 supervisor = LlmAgent(
     name="Supervisor",
     model="gemini-2.0-flash-live-001", # Use a consistent and available model
@@ -306,23 +295,15 @@ supervisor = LlmAgent(
 
     Upon receiving a user query, you must analyze its content to determine which sub-agent tool should handle it. You have the following tools available for different types of operations:
 
-    execute_greeting tool
     Add tool
     Subtract tool
     Multiply tool
     Get current time tool
     Get weather tool
-    execute_sql_pipeline: for generating and executing SQL queries and returning results.
-    execute_visualization_pipeline: for creating graph visualization of the data based on user requests.
-    execute_poster_pipeline: for creating posters or images based on user requests.
-
-    Your task is to assess the user’s query and decide which tool is best suited. 
-    After calling a tool, you MUST return the result of that tool's execution to the user. 
-    For example, if a visualization is created, confirm that the chart has been generated.
+    Execute code pipeline tool
+    monitor_stock_price tool
+Your task is to assess the user’s query and decide which tool is best suited for processing it.
     """,
     description="Intelligent router for directing user queries to the appropriate sub-agent tools.",
-    tools=[add,subtract,multiply,get_current_time,get_weather,execute_greeting,execute_sql_pipeline,execute_visualization_pipeline,execute_poster_pipeline],  # This part is correct
+    tools=[add,subtract,multiply,get_current_time,get_weather,execute_code_pipeline,monitor_stock_price],  # This part is correct
 )
-
-#monitor_stock_price tool
-#execute_code_pipeline

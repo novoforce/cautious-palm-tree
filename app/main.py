@@ -1,5 +1,5 @@
 # app/main.py
-from fastapi import FastAPI, Query, WebSocket
+from fastapi import FastAPI, Query, WebSocket,Response, status
 from typing import AsyncIterable, Dict, Any
 from app.api.v1.routers import api_router
 from app.core.config import settings
@@ -17,7 +17,7 @@ from google.genai import types
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
 from typing import AsyncIterable
-
+from app.services.visualization_agent.agent import _artifact_service, _session_service as _vis_session_service
 
 # Configure basic logging for the FastAPI app
 logging.basicConfig(
@@ -28,7 +28,7 @@ logger = logging.getLogger("fastapi_app")
 
 APP_NAME = "Serena Agent"
 session_service = InMemorySessionService()
-artifact_service = InMemoryArtifactService() # Placeholder for artifact service, if needed later
+artifact_service = _artifact_service # Placeholder for artifact service, if needed later
 
 async def start_agent_session(
     session_id: str,
@@ -119,6 +119,37 @@ async def agent_to_client_messaging(
                 logger.info(f"[AGENT_TO_CLIENT_SEND - TURN_STATUS]: {message}")
                 await websocket.send_text(json.dumps(message))
                 continue # Move to next event
+            function_responses = event.get_function_responses()
+            if function_responses:
+                for response in function_responses:
+                    # Check if this is the output from our visualization pipeline
+                    if response.name == "execute_visualization_pipeline":
+                        logger.info(f"Detected tool output from: {response.name}")
+                        try:
+                            # The result is in `response.response`. It might be a dict or a JSON string.
+                            result_data = response.response
+                            if isinstance(result_data, str):
+                                result_data = json.loads(result_data)
+                            
+                            # Check if an artifact was successfully created
+                            if result_data.get("artifact_saved") == "plot.png":
+                                artifact_session_id = result_data.get("session_id")
+                                artifact_filename = result_data.get("artifact_saved")
+                                
+                                # Construct the URL to the artifact endpoint
+                                image_url = f"/artifacts/{artifact_session_id}/{artifact_filename}"
+                                
+                                # Send a special message to the client with the image URL
+                                viz_message = {
+                                    "role": "model",
+                                    "mime_type": "image/png",
+                                    "data": image_url,
+                                    "caption": "Here is the visualization you requested:"
+                                }
+                                logger.info(f"[AGENT_TO_CLIENT_SEND - VISUALIZATION]: {viz_message}")
+                                await websocket.send_text(json.dumps(viz_message))
+                        except (json.JSONDecodeError, KeyError, TypeError) as e:
+                            logger.error(f"Error parsing visualization tool output: {e}. Output was: {response.response}")
 
             # 2. Handle Function Calls
             calls = event.get_function_calls()
@@ -293,6 +324,35 @@ async def root():
     """Serves the index.html"""
     print("index path:> ",os.path.join(STATIC_DIR, "index.html"))
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+@app.get("/artifacts/{session_id}/{filename}")
+async def get_artifact(session_id: str, filename: str):
+    """
+    Retrieves an artifact (like a chart image) from the in-memory artifact service.
+    """
+    logger.info(f"Request for artifact '{filename}' from session '{session_id}'")
+    try:
+        # NOTE: The visualization agent uses its own user_id. We need to use that here.
+        USER_ID_VIZ = "dev_user_01" 
+        artifact = await _artifact_service.load_artifact(
+            app_name="visualization_app",
+            user_id=USER_ID_VIZ,
+            session_id=session_id,
+            filename=filename,
+        )
+
+        if artifact and artifact.inline_data:
+            image_bytes = artifact.inline_data.data
+            mime_type = artifact.inline_data.mime_type
+            return Response(content=image_bytes, media_type=mime_type)
+        else:
+            logger.warning(f"Artifact not found: session='{session_id}', file='{filename}'")
+            return Response(status_code=status.HTTP_404_NOT_FOUND, content="Artifact not found")
+
+    except Exception as e:
+        logger.error(f"Error retrieving artifact: {e}", exc_info=True)
+        return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content="Error retrieving artifact")
+
 
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(

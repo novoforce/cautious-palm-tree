@@ -49,7 +49,7 @@ function connectWebsocket() {
   websocket.onmessage = function (event) {
     const message_from_server = JSON.parse(event.data);
     // console.log("[AGENT TO CLIENT] RAW: ", event.data); // For deep debugging if JSON parsing fails
-    // console.log("[AGENT TO CLIENT] Parsed: ", message_from_server); // General log for received message
+    console.log("[AGENT TO CLIENT] Parsed: ", message_from_server); // General log for received message
 
     // --- 1. Handle User Transcription ---
     if (message_from_server.role === "user_transcription") {
@@ -114,6 +114,38 @@ function connectWebsocket() {
         }
       }
     }
+
+    if (message_from_server.mime_type === "image/png" && message_from_server.role === "model") {
+      console.log("!!! DETECTED IMAGE MESSAGE !!!", message_from_server); 
+      typingIndicator.classList.remove("visible"); // Hide indicator as content arrives
+      
+      const messageContainer = document.createElement("div");
+      messageContainer.className = "agent-message"; // Use the same styling as agent text messages
+
+      // Optional: Add a caption if provided
+      if (message_from_server.caption) {
+        const captionElem = document.createElement("p");
+        captionElem.className = "image-caption";
+        captionElem.textContent = message_from_server.caption;
+        messageContainer.appendChild(captionElem);
+      }
+      
+      const imageElem = document.createElement("img");
+      imageElem.src = message_from_server.data; // The data is the URL
+      imageElem.alt = "Generated Chart";
+      imageElem.className = "chat-image";
+      
+      // Add onload handler to scroll after image has loaded and dimensions are known
+      imageElem.onload = () => {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      };
+
+      messageContainer.appendChild(imageElem);
+      messagesDiv.appendChild(messageContainer);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+
 
     // --- 5. Handle Agent Text Output ---
     if (message_from_server.mime_type === "text/plain" && message_from_server.role === "model") {

@@ -325,4 +325,102 @@
       transform: translateY(-5px);
     }
   }
+
+  .chat-image {
+    max-width: 350px; /* Set a max-width for the thumbnail in the chat */
+    max-height: 300px; /* And a max-height */
+    width: auto;       /* Maintain aspect ratio */
+    height: auto;      /* Maintain aspect ratio */
+    border-radius: 8px;
+    margin-top: 8px;
+    border: 1px solid var(--gray-light);
+    display: block;
+    cursor: zoom-in; /* Change cursor to indicate it's clickable */
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .chat-image:hover {
+    transform: scale(1.03); /* Slight zoom effect on hover */
+  }
+  
+  /* Optional styling for the caption above the image */
+  .image-caption {
+    margin-bottom: 0 !important; /* Override the default p margin inside the message */
+    padding: 0 !important; /* Override padding */
+    background-color: transparent !important; /* No separate background for the caption */
+    font-style: italic;
+    font-size: 0.9em;
+    color: var(--text-color);
+  }
+  
+  .modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    padding-top: 60px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.9); /* Black w/ opacity */
+    animation: fadeInModal 0.3s ease;
+  }
+  
+  /* Modal Content (the image) */
+  .modal-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 900px;
+    animation: zoomInModal 0.3s ease;
+  }
+  
+  /* Caption of Modal Image */
+  #modalCaption {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    text-align: center;
+    color: #ccc;
+    padding: 10px 0;
+    height: 150px;
+  }
+  
+  /* Add Animation */
+  @keyframes zoomInModal {
+    from {transform: scale(0.8); opacity: 0;}
+    to {transform: scale(1); opacity: 1;}
+  }
+  @keyframes fadeInModal {
+    from {opacity: 0;}
+    to {opacity: 1;}
+  }
+  
+  /* The Close Button */
+  .close-modal-button {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  
+  .close-modal-button:hover,
+  .close-modal-button:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  
+  /* On smaller screens, where height is less than 800px, change the font-size of the close button */
+  @media only screen and (max-width: 700px){
+    .modal-content {
+      width: 100%;
+    }
+  }
   
