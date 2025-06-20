@@ -86,7 +86,7 @@ When the user asks you to create an image, you MUST call the `generate_image` to
 _session_service = InMemorySessionService()
 # _artifact_service = InMemoryArtifactService()
 
-async def execute_poster_pipeline(user_prompt: str) -> Dict[str, Any]:
+async def execute_poster_pipeline(user_prompt: str,tool_context: ToolContext) -> Dict[str, Any]:
     """
     Executes the poster agent pipeline to generate an image artifact.
 
@@ -135,6 +135,7 @@ async def execute_poster_pipeline(user_prompt: str) -> Dict[str, Any]:
         print("✅ Poster pipeline completed successfully.")
         return {
             "session_id": current_session_id,
+            "app_name": APP_NAME,
             "artifact_saved": generated_filename if final_artifact else "No",
             "artifact_size_bytes": len(final_artifact.inline_data.data) if final_artifact else 0,
         }

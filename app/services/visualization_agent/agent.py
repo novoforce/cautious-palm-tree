@@ -229,6 +229,7 @@ async def execute_visualization_pipeline(user_query: str, query_data: List[Dict[
         print("✅ Visualization pipeline completed successfully.")
         return {
             "session_id": current_session_id,
+            "app_name": APP_NAME,
             "chart_type_info": chart_type_info or "Not generated.",
             "generated_plotly_code": plotly_code or "Not generated.",
             "execution_summary": execution_summary or "Not executed.",
