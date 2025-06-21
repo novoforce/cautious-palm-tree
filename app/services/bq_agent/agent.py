@@ -92,7 +92,12 @@ class BigQueryReader:
 
 # Initialize the BigQuery reader tool.
 # TODO: Replace hardcoded paths with environment variables for better security and portability.
-SERVICE_ACCOUNT_PATH = r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\hackathon-agents-044c975e8972.json"
+SERVICE_ACCOUNT_PATH = r"..\..\hackathon-agents-044c975e8972.json"
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+root_directory = os.path.abspath(os.path.join(current_directory, '..', '..','..'))
+SERVICE_ACCOUNT_PATH = os.path.join(root_directory, 'hackathon-agents-044c975e8972.json')
+
 bq_reader = BigQueryReader(project_id="hackathon-agents", service_account_key_path=SERVICE_ACCOUNT_PATH)
 
 # ==============================================================================

@@ -9,3 +9,5 @@ streamlit
 google-cloud-aiplatform
 plotly
 nbformat
+python-dotenv
+httpx
