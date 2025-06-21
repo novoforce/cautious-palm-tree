@@ -31,7 +31,12 @@ function connectWebsocket() {
 
   // Connect websocket
   const wsQuery = `?is_audio=${is_audio}&agent_wants_audio_output=${agentWantsAudioOutput}`;
-  const wsUrl = ws_url + wsQuery;
+  const sessionId = Math.random().toString().substring(10);
+// Determine the correct protocol (wss for https, ws for http)
+// window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const protocol = 'wss:' 
+  const ws_url_base = `${protocol}//${window.location.host}/ws/${sessionId}`;
+  const wsUrl = ws_url_base + wsQuery;
   console.log(`Connecting to WebSocket: ${wsUrl}`);
   websocket = new WebSocket(wsUrl);
 
