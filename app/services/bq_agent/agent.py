@@ -56,7 +56,11 @@ def json_to_paragraphs(file_path):
 def bigquery_metdata_extraction_tool():
     """ Extracts BigQuery table metadata from a JSON file."""
     # TODO: Replace hardcoded path with environment variable or configuration.
-    json_path = r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\dataset_info.json"
+    # json_path = r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\dataset_info.json"
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    root_directory = os.path.abspath(os.path.join(current_directory, '..', '..','..'))
+    json_path = os.path.join(root_directory, 'dataset_info.json')
+
     if not os.path.exists(json_path):
         raise FileNotFoundError(f"Metadata JSON file not found at: {json_path}")
     return json_to_paragraphs(json_path)
