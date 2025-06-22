@@ -9,16 +9,17 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts import InMemoryArtifactService
 from google.adk.runners import Runner
 from google.genai.types import Content, Part
+from google.adk.tools import ToolContext
 from dotenv import load_dotenv
+from app.core.config import settings
+from .utils import execute_plotly_code_and_get_image_bytes
+from .prompt import (
+    CHART_TYPE_PREDICTOR_INSTRUCTION,
+    PLOTLY_CODE_GENERATOR_INSTRUCTION,
+    PLOTLY_CODE_EXECUTOR_INSTRUCTION,
+)
 import logging
 import traceback
-
-# Import Plotly for the tool
-import plotly.graph_objects as go
-import plotly.io as pio
-# Import ADK tool-related classes
-from google.adk.tools import ToolContext
-from google.genai import types
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -27,133 +28,32 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 APP_NAME = "visualization_app"
 USER_ID = "dev_user_01"
-MODEL_GEMINI_2_0_FLASH = "gemini-2.0-flash-001"
 
-# ==============================================================================
-# AGENT AND TOOL DEFINITIONS
-# ==============================================================================
-
-# Agent 1: Predicts the best chart type (Unchanged)
 chart_type_agent = LlmAgent(
     name="chart_type_predictor_agent",
-    model=MODEL_GEMINI_2_0_FLASH,
+    model=settings.VISUALIZATION_AGENT_GEMINI_MODEL,
     description="Predicts the chart type and design based on the user query and provided data.",
-    instruction=(
-        """You are an expert data visualization AI. Your task is to predict the most effective chart type
-        based on a user's query and the data they provide.
-
-        Analyze the structure of the data (column names, number of rows) and the user's goal.
-        Recommend a chart type (e.g., 'bar', 'line', 'pie', 'scatter') and provide a brief justification.
-
-        User Query: "{user_query}"
-        Data (first 5 rows): ```{query_execution_output}```
-
-        Output your prediction as a JSON object with keys "chart_type" and "justification".
-        """
-    ),
+    instruction=CHART_TYPE_PREDICTOR_INSTRUCTION,
     output_key="chart_type_output",
 )
 
-# Agent 2: Generates Plotly code (Unchanged)
 plotly_code_agent = LlmAgent(
     name="plotly_code_generator_agent",
-    model=MODEL_GEMINI_2_0_FLASH,
+    model=settings.VISUALIZATION_AGENT_GEMINI_MODEL,
     description="Generates Python Plotly code for the predicted chart type and data.",
-    instruction=(
-        """You are a Python Plotly expert. Your task is to write Plotly code to generate a chart.
-
-        - The data is available in a variable named `data`, which is a list of dictionaries.
-        - The chart specification is provided below.
-        - The generated Python code must create a Plotly Figure object and assign it to a variable named `fig`.
-        - Do not include any `import` statements or data loading code. Assume `data` is pre-loaded.
-        - Ensure the chart has clear titles and axis labels.
-
-        Chart Specification: ```{chart_type_output}```
-        Data for Charting: ```{query_execution_output}```
-
-        Output ONLY the raw Python code required to generate the figure.
-        """
-    ),
+    instruction=PLOTLY_CODE_GENERATOR_INSTRUCTION,
     output_key="plotly_code_output",
 )
 
-
-# ==============================================================================
-# CORRECTED TOOL AND EXECUTOR AGENT
-# ==============================================================================
-
-# Tool: Executes Plotly code. The signature is now simplified.
-async def execute_plotly_code_and_get_image_bytes(
-    plotly_code_str: str, tool_context: ToolContext
-):
-    """
-    Executes a string of Plotly Python code to generate and save a chart image.
-    The code string must define a variable `fig` holding the Plotly Figure object.
-    The data for the chart is retrieved from the session state key 'query_execution_output'.
-    """
-    try:
-        logger.info("Executing generated Plotly code...")
-        
-        # FIX: Retrieve data from the context instead of as a parameter
-        data = tool_context.state.get("query_execution_output")
-        if not data:
-            raise ValueError("Data not found in session state under key 'query_execution_output'.")
-
-        # Prepare the execution environment with the data
-        execution_globals = {'go': go, 'data': data}
-        local_vars = {}
-
-        # Execute the code string in the prepared environment
-        exec(plotly_code_str, execution_globals, local_vars)
-
-        fig = local_vars.get('fig')
-        if fig is None or not isinstance(fig, go.Figure):
-            raise ValueError("Plotly code must define a Figure object named 'fig'.")
-
-        logger.info("Generating PNG image from Plotly figure.")
-        image_bytes = pio.to_image(fig, format='png')
-        
-        artifact_filename = "plot.png"
-        await tool_context.save_artifact(
-            artifact_filename,
-            types.Part.from_bytes(data=image_bytes, mime_type='image/png'),
-        )
-        logger.info(f"Successfully saved chart as artifact: '{artifact_filename}'")
-        
-        return {
-            "status": "success",
-            "detail": f"Image generated successfully and stored as artifact '{artifact_filename}'.",
-            "filename": artifact_filename,
-        }
-    except Exception as e:
-        error_message = f"Error executing Plotly code: {e}\n{traceback.format_exc()}"
-        logger.error(error_message)
-        return {"status": "error", "detail": error_message}
-
-
-# Agent 3: Executes the code using the tool. Instruction is now simplified.
 plotly_code_executor_agent = LlmAgent(
-    model=MODEL_GEMINI_2_0_FLASH,
+    model=settings.VISUALIZATION_AGENT_GEMINI_MODEL,
     name='plotly_code_executor_agent',
     description="An agent that executes Plotly code to generate an image.",
-    # FIX: Simplified instruction, as data is no longer a direct parameter
-    instruction="""You are a code execution agent.
-    Your task is to execute the provided Plotly code using the `execute_plotly_code_and_get_image_bytes` tool.
-
-    The code to execute is:
-    ```{plotly_code_output}```
-
-    Call the tool with the `plotly_code_str` argument. The data is available to the tool automatically.
-    """,
+    instruction=PLOTLY_CODE_EXECUTOR_INSTRUCTION,
     tools=[execute_plotly_code_and_get_image_bytes],
     output_key="execution_summary"
 )
 
-# ==============================================================================
-# SEQUENTIAL AGENT AND EXECUTION WRAPPER
-# ==============================================================================
-
-# The complete sequential visualization pipeline (Unchanged)
 visualization_agent = SequentialAgent(
     name="VisualizationPipelineAgent",
     sub_agents=[chart_type_agent, plotly_code_agent, plotly_code_executor_agent],
@@ -165,7 +65,7 @@ _session_service = InMemorySessionService()
 _artifact_service = InMemoryArtifactService()
 
 # The main execution function
-async def execute_visualization_pipeline(user_query: str, query_data: List[Dict[str, Any]], tool_context: ToolContext) -> Dict[str, Any]:
+async def call_visualization_agent(user_query: str, query_data: List[Dict[str, Any]], tool_context: ToolContext) -> Dict[str, Any]:
     """
     Executes the visualization pipeline to generate a chart image artifact.
 
@@ -258,7 +158,7 @@ async def main():
     
     user_input = "Show me a bar chart of the top selling products"
     
-    result = await execute_visualization_pipeline(user_input, mock_sql_result)
+    result = await call_visualization_agent(user_input, mock_sql_result)
 
     print("\n--- VISUALIZATION PIPELINE RESULTS ---")
     if result.get("error"):

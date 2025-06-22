@@ -1,3 +1,5 @@
+# main_agent.py
+
 import asyncio
 import uuid
 import os
@@ -9,9 +11,14 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai.types import Content, Part
-from google.cloud import bigquery
-from google.cloud.exceptions import NotFound, GoogleCloudError
-from dotenv import load_dotenv
+from app.core.config import settings
+from .utils import BigQueryReader, bigquery_metdata_extraction_tool
+from .prompt import (
+    QUERY_UNDERSTANDING_INSTRUCTION,
+    QUERY_GENERATION_INSTRUCTION,
+    QUERY_REVIEW_REWRITE_INSTRUCTION,
+    QUERY_EXECUTION_INSTRUCTION,
+)
 import logging
 import traceback
 
@@ -22,146 +29,38 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 APP_NAME = "sql_pipeline_app"
 USER_ID = "dev_user_01"
-MODEL_GEMINI_2_0_FLASH = "gemini-2.0-flash-001"
 
-# ==============================================================================
-# YOUR HELPER FUNCTIONS AND CLASSES (Unchanged)
-# ==============================================================================
-
-def json_to_paragraphs(file_path):
-    # TODO: Consider loading this data once at startup instead of on every run.
-    with open(file_path, 'r') as file:
-        data = json.load(file)
-    paragraphs = []
-    for table in data.get('tables', []):
-        table_name = table.get('table_name', 'Unnamed Table')
-        table_description = table.get('table_description', 'No description available.')
-        paragraph = f"Table '{table_name}': {table_description}\n"
-        paragraph += "Columns:\n"
-        for column in table.get('columns', []):
-            column_name = column.get('column_name', 'Unnamed Column')
-            column_type = column.get('column_type', 'Unknown Type')
-            column_description = column.get('column_description', 'No description available.')
-            is_primary_key = column.get('is_primary_key', False)
-            primary_key_info = " (Primary Key)" if is_primary_key else ""
-            foreign_key_info = ""
-            if 'foreign_key' in column:
-                fk_table = column['foreign_key'].get('reference_table', 'Unknown Table')
-                fk_column = column['foreign_key'].get('reference_column', 'Unknown Column')
-                foreign_key_info = f" (Foreign Key references {fk_table}.{fk_column})"
-            paragraph += f"  - {column_name} ({column_type}): {column_description}{primary_key_info}{foreign_key_info}\n"
-        paragraphs.append(paragraph)
-    return "\n".join(paragraphs)
-
-def bigquery_metdata_extraction_tool():
-    """ Extracts BigQuery table metadata from a JSON file."""
-    # TODO: Replace hardcoded path with environment variable or configuration.
-    # json_path = r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\dataset_info.json"
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    root_directory = os.path.abspath(os.path.join(current_directory, '..', '..','..'))
-    json_path = os.path.join(root_directory, 'dataset_info.json')
-
-    if not os.path.exists(json_path):
-        raise FileNotFoundError(f"Metadata JSON file not found at: {json_path}")
-    return json_to_paragraphs(json_path)
-
-class BigQueryReader:
-    """A class to encapsulate BigQuery read operations."""
-    def __init__(self, project_id: str, service_account_key_path: str):
-        if not os.path.exists(service_account_key_path):
-            logger.error(f"Service account key file not found at: {service_account_key_path}")
-            raise FileNotFoundError(f"Service account key not found at: {service_account_key_path}")
-        self.project_id = project_id
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = service_account_key_path
-        try:
-            self.client = bigquery.Client(project=self.project_id)
-            logger.info(f"BigQuery client successfully initialized for project: {self.client.project}")
-        except Exception as e:
-            logger.error(f"Failed to initialize BigQuery client: {e}")
-            raise ConnectionError(f"Could not connect to BigQuery. Check credentials. Error: {e}")
-
-    def execute_query(self, query: str) -> Any:
-        """Executes a SQL query and returns results or an error string."""
-        logger.info(f"Executing BigQuery query: {query[:100]}...")
-        try:
-            query_job = self.client.query(query)
-            results = query_job.result()
-            rows = [dict(row) for row in results]
-            logger.info(f"Query executed successfully. Fetched {len(rows)} rows.")
-            return rows
-        except Exception:
-            error_message = f"Error during query execution: {traceback.format_exc()}"
-            logger.error(error_message)
-            return {"error": error_message}
-
-# Initialize the BigQuery reader tool.
-# TODO: Replace hardcoded paths with environment variables for better security and portability.
-SERVICE_ACCOUNT_PATH = r"..\..\hackathon-agents-044c975e8972.json"
-
-current_directory = os.path.dirname(os.path.abspath(__file__))
-root_directory = os.path.abspath(os.path.join(current_directory, '..', '..','..'))
-SERVICE_ACCOUNT_PATH = os.path.join(root_directory, 'hackathon-agents-044c975e8972.json')
-
-bq_reader = BigQueryReader(project_id="hackathon-agents", service_account_key_path=SERVICE_ACCOUNT_PATH)
-
-# ==============================================================================
-# YOUR AGENT DEFINITIONS (Unchanged, but with added context)
-# ==============================================================================
+bq_reader = BigQueryReader(project_id=settings.GOOGLE_CLOUD_PROJECT_ID, service_account_key_path=settings.BIGQUERY_SERVICE_ACCOUNT_KEY_PATH)
 
 def initialize_state_var(callback_context: CallbackContext):
     """Callback to initialize the session state before the pipeline runs."""
-    callback_context.state["PROJECT"] = "hackathon-agents"
-    callback_context.state["BQ_LOCATION"] = "us-central1"
-    callback_context.state["DATASET"] = "StyleHub"
-    # This pre-loads the metadata so the agents can use it.
+    callback_context.state["PROJECT"] = settings.GOOGLE_CLOUD_PROJECT_ID # "hackathon-agents"
+    callback_context.state["BQ_LOCATION"] = settings.BQ_LOCATION #"us-central1"
+    callback_context.state["DATASET"] = settings.BQ_DATASET # "StyleHub"
     callback_context.state["bigquery_metadata"] = bigquery_metdata_extraction_tool()
     logger.info("Session state initialized with BigQuery project, location, and metadata.")
 
 # Agent 1: Understands the user's query
 query_understanding_agent = LlmAgent(
     name="query_understanding_agent",
-    model=MODEL_GEMINI_2_0_FLASH,
-    instruction="""
-    You are a data analyst. Your role is to understand the user's natural language query.
-    Identify the BigQuery tables and columns needed to answer the query.
-    If the query is ambiguous, ask clarifying questions.
-    Use the provided BigQuery metadata: {bigquery_metadata}
-    Format the output as a JSON object with table.column as keys and your reasoning as values.
-    """,
+    model=settings.BQ_AGENT_GEMINI_MODEL,
+    instruction=QUERY_UNDERSTANDING_INSTRUCTION,
     output_key="query_understanding_output"
 )
 
 # Agent 2: Generates the initial SQL query
 query_generation_agent = LlmAgent(
     name="query_generation_agent",
-    model=MODEL_GEMINI_2_0_FLASH,
-    instruction="""
-    You are a BigQuery SQL writer. Your job is to write standard BigQuery SQL.
-    - Use the analysis from the previous agent: {query_understanding_output}
-    - Use project '{PROJECT}', location '{BQ_LOCATION}', and dataset '{DATASET}'.
-    - Use the following metadata: <METADATA>{bigquery_metadata}</METADATA>
-    Output only the generated query as a raw text string.
-    """,
+    model=settings.BQ_AGENT_GEMINI_MODEL,
+    instruction=QUERY_GENERATION_INSTRUCTION,
     output_key="query_generation_output"
 )
 
 # Agent 3: Reviews and refactors the SQL
 query_review_rewrite_agent = LlmAgent(
     name="query_review_agent",
-    model=MODEL_GEMINI_2_0_FLASH,
-    instruction="""
-    You are a BigQuery SQL reviewer and rewriter.
-    - Original analysis: {query_understanding_output}
-    - Initial query: {query_generation_output}
-    - Use project '{PROJECT}', location '{BQ_LOCATION}', dataset '{DATASET}'.
-    - Use metadata: {bigquery_metadata}
-    Review and rewrite the query based on these rules:
-    - Ensure all columns have proper aliases.
-    - Add 'LIMIT 10' to SELECT queries that might fetch many records.
-    - Ensure filter conditions are case-insensitive (e.g., use LOWER() or UPPER()).
-    - Convert datetime/timestamp columns to strings for display.
-    Output only the final, rewritten query as a raw text string.
-    """,
+    model=settings.BQ_AGENT_GEMINI_MODEL,
+    instruction=QUERY_REVIEW_REWRITE_INSTRUCTION,
     output_key="query_review_rewrite_output"
 )
 
@@ -169,12 +68,8 @@ query_review_rewrite_agent = LlmAgent(
 # This agent's primary job is to format the input for the tool call.
 query_execution_agent = LlmAgent(
     name="query_execution_agent",
-    model=MODEL_GEMINI_2_0_FLASH,
-    instruction="""
-    You are a BigQuery SQL executor.
-    You must execute the provided SQL query using the `execute_query` tool.
-    The query to execute is: {query_review_rewrite_output}
-    """,
+    model=settings.BQ_AGENT_GEMINI_MODEL,
+    instruction=QUERY_EXECUTION_INSTRUCTION,
     tools=[bq_reader.execute_query],
     output_key="query_execution_output"
 )
@@ -194,12 +89,16 @@ sql_pipeline_agent = SequentialAgent(
 # Session Service Setup
 _session_service = InMemorySessionService()
 
-# ==============================================================================
-# WRAPPER FUNCTION TO EXECUTE THE PIPELINE
-# ==============================================================================
-async def execute_sql_pipeline(user_query: str) -> Dict[str, Any]:
+async def call_bq_agent(user_query: str) -> Dict[str, Any]:
     """
-    Executes the complete SQL generation and execution pipeline asynchronously.
+    Executes the complete BigQuery SQL generation and execution pipeline asynchronously.
+
+    The function follows these steps:
+    1. Creates a session for the user's query.
+    2. Initializes a Runner with the SQL pipeline agent.
+    3. Runs the SQL pipeline agent asynchronously to process the user's query.
+    4. Extracts the output from each stage of the pipeline (query understanding, SQL generation, SQL review, and query execution).
+    5. Returns the results from each stage.
 
     Args:
         user_query (str): A natural language query about the data.
@@ -207,11 +106,17 @@ async def execute_sql_pipeline(user_query: str) -> Dict[str, Any]:
 
     Returns:
         dict: A dictionary containing the results from each stage of the pipeline.
+            - 'user_query' (str): The original user's query.
+            - 'understanding' (str): The output from the query understanding agent.
+                                     If not generated, returns "Not generated."
+            - 'generated_sql' (str): The SQL query generated by the SQL generation agent.
+                                     If not generated, returns "Not generated."
+            - 'reviewed_sql' (str): The SQL query reviewed and potentially rewritten by the SQL review agent.
+                                    If not generated, returns "Not generated."
+            - 'execution_result' (Any): The results of the executed query.
+                                        If not executed, returns "Not executed."
+            - 'error' (str, optional): An error message if the pipeline execution fails.
     """
-    load_dotenv()
-    if not os.getenv("GOOGLE_API_KEY"):
-        return {"error": "GOOGLE_API_KEY environment variable not found."}
-
     try:
         current_session_id = str(uuid.uuid4())
         print(f"▶️  Running SQL pipeline for query: '{user_query[:50]}...'")
@@ -243,6 +148,12 @@ async def execute_sql_pipeline(user_query: str) -> Dict[str, Any]:
         reviewed_sql = session_state_data.state.get("query_review_rewrite_output")
         execution_result = session_state_data.state.get("query_execution_output")
 
+        print("understanding_output:>",understanding_output)
+        print("generated_sql:>",generated_sql)
+        print("reviewed_sql:>",reviewed_sql)
+        print("execution_result:>",execution_result)
+
+
         print("✅ SQL pipeline completed successfully.")
         return {
             "user_query": user_query,
@@ -262,12 +173,6 @@ async def main():
     """Main function to demonstrate running the SQL pipeline."""
     print("--- Running SQL Pipeline Agent ---")
     
-    # IMPORTANT: Ensure you have:
-    # 1. A .env file with your GOOGLE_API_KEY.
-    # 2. The BigQuery Service Account JSON key at the specified path.
-    # 3. The dataset_info.json file at the specified path.
-
-    # user_input = "how many users are there?"
     user_input = "what are the products with cost price more than 100?"
     
     result = await execute_sql_pipeline(user_input)

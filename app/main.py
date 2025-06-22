@@ -43,12 +43,12 @@ async def start_agent_session(
     session = await session_service.create_session(
         app_name=APP_NAME,
         user_id=session_id,
-        session_id=session_id # Using user_id as session_id for simplicity here
+        session_id=session_id
     )
     # Create a Runner
     runner = Runner(
         app_name=APP_NAME,
-        agent=supervisor, #general_agent, #root_agent, #general_agent, # Ensure general_agent is correctly defined and imported
+        agent=supervisor,
         session_service=session_service,
         artifact_service=artifact_service
     )
@@ -107,9 +107,6 @@ async def agent_to_client_messaging(
             if event is None:
                 continue
 
-            # --- Optional: Enable for very detailed raw ADK event logging ---
-            # logger.debug(f"[ADK_RAW_EVENT]: {event}") 
-
             # 1. Handle Turn Completion or Interruption
             if event.turn_complete or event.interrupted:
                 message: Dict[str, Any] = { 
@@ -119,37 +116,7 @@ async def agent_to_client_messaging(
                 logger.info(f"[AGENT_TO_CLIENT_SEND - TURN_STATUS]: {message}")
                 await websocket.send_text(json.dumps(message))
                 continue # Move to next event
-            # function_responses = event.get_function_responses()
-            # if function_responses:
-            #     for response in function_responses:
-            #         # Check if this is the output from our visualization pipeline
-            #         if response.name == "execute_visualization_pipeline":
-            #             logger.info(f"Detected tool output from: {response.name}")
-            #             try:
-            #                 # The result is in `response.response`. It might be a dict or a JSON string.
-            #                 result_data = response.response
-            #                 if isinstance(result_data, str):
-            #                     result_data = json.loads(result_data)
-                            
-            #                 # Check if an artifact was successfully created
-            #                 if result_data.get("artifact_saved") == "plot.png":
-            #                     artifact_session_id = result_data.get("session_id")
-            #                     artifact_filename = result_data.get("artifact_saved")
-                                
-            #                     # Construct the URL to the artifact endpoint
-            #                     image_url = f"/artifacts/{artifact_session_id}/{artifact_filename}"
-                                
-            #                     # Send a special message to the client with the image URL
-            #                     viz_message = {
-            #                         "role": "model",
-            #                         "mime_type": "image/png",
-            #                         "data": image_url,
-            #                         "caption": "Here is the visualization you requested:"
-            #                     }
-            #                     logger.info(f"[AGENT_TO_CLIENT_SEND - VISUALIZATION]: {viz_message}")
-            #                     await websocket.send_text(json.dumps(viz_message))
-            #             except (json.JSONDecodeError, KeyError, TypeError) as e:
-            #                 logger.error(f"Error parsing visualization tool output: {e}. Output was: {response.response}")
+
             function_responses = event.get_function_responses()
             if function_responses:
                 for response in function_responses:
@@ -204,9 +171,6 @@ async def agent_to_client_messaging(
                     logger.info(f"[AGENT_TO_CLIENT_SEND - TOOL_CALL]: {message}")
                     await websocket.send_text(json.dumps(message))
                 # If a function call event is also a final response or has other content,
-                # it will be processed further. If not, we might want to `continue` here
-                # depending on ADK event structure for tool calls. For now, let it pass through.
-            
             # 3. Handle Content Parts (Text from User/Model, Audio from Model)
             if event.content and event.content.parts:
                 event_content_role = event.content.role 
@@ -231,7 +195,6 @@ async def agent_to_client_messaging(
                                 "data": part.text,
                                 "role": "user_transcription",
                             }
-                        # --- MODIFIED: Handle model text even if EventContentRole is None ---
                         elif event_content_role == "model" or event_content_role is None:
                             # If it has text and isn't user_transcription, assume it's model's response.
                             # This catches intermediate text chunks with EventContentRole: 'None'.
@@ -240,8 +203,6 @@ async def agent_to_client_messaging(
                                 "data": part.text,
                                 "role": "model", # Send with role 'model' for client handling
                             }
-                        # --- END OF MODIFICATION ---
-                    
                     # B. Check for Inline Audio Data (expected for model's audio output)
                     if part.inline_data and \
                        part.inline_data.mime_type and \
@@ -290,7 +251,7 @@ async def client_to_agent_messaging(
 ):
     """Client to agent communication"""
     while True:
-        try: # Added try-except to handle potential disconnects gracefully
+        try: 
             message_json = await websocket.receive_text()
             message = json.loads(message_json)
             mime_type = message["mime_type"]
@@ -307,18 +268,16 @@ async def client_to_agent_messaging(
                 )
             else:
                 logger.error(f"Mime type not supported: {mime_type}")
-                # Optionally send error back to client
                 await websocket.send_text(json.dumps({"error": f"Mime type not supported: {mime_type}", "role": "system"}))
 
         except asyncio.CancelledError:
             logger.info("client_to_agent_messaging task cancelled.")
             break
-        except WebSocketDisconnect: # Specific exception for WebSocket disconnects
+        except WebSocketDisconnect:
             logger.info("Client disconnected from client_to_agent_messaging.")
             break
         except Exception as e:
             logger.error(f"Error in client_to_agent_messaging: {e}")
-            # Optionally, try to send an error message to the client
             try:
                 await websocket.send_text(json.dumps({"error": str(e), "role": "system"}))
             except: # If sending fails, the connection is likely already gone
@@ -402,34 +361,6 @@ async def get_artifact(app_name: str, session_id: str, filename: str):
     except Exception as e:
         logger.error(f"Error retrieving artifact: {e}", exc_info=True)
         return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content="Error retrieving artifact")
-
-# @app.get("/artifacts/{session_id}/{filename}")
-# async def get_artifact(session_id: str, filename: str):
-#     """
-#     Retrieves an artifact (like a chart image) from the in-memory artifact service.
-#     """
-#     logger.info(f"Request for artifact '{filename}' from session '{session_id}'")
-#     try:
-#         # NOTE: The visualization agent uses its own user_id. We need to use that here.
-#         USER_ID_VIZ = "dev_user_01" 
-#         artifact = await _artifact_service.load_artifact(
-#             app_name="visualization_app",
-#             user_id=USER_ID_VIZ,
-#             session_id=session_id,
-#             filename=filename,
-#         )
-
-#         if artifact and artifact.inline_data:
-#             image_bytes = artifact.inline_data.data
-#             mime_type = artifact.inline_data.mime_type
-#             return Response(content=image_bytes, media_type=mime_type)
-#         else:
-#             logger.warning(f"Artifact not found: session='{session_id}', file='{filename}'")
-#             return Response(status_code=status.HTTP_404_NOT_FOUND, content="Artifact not found")
-
-#     except Exception as e:
-#         logger.error(f"Error retrieving artifact: {e}", exc_info=True)
-#         return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content="Error retrieving artifact")
 
 
 @app.websocket("/ws/{session_id}")

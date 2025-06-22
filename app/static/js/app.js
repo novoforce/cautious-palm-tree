@@ -34,7 +34,7 @@ function connectWebsocket() {
   const sessionId = Math.random().toString().substring(10);
 // Determine the correct protocol (wss for https, ws for http)
 // window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const protocol = 'wss:' 
+  const protocol = 'ws:' 
   const ws_url_base = `${protocol}//${window.location.host}/ws/${sessionId}`;
   const wsUrl = ws_url_base + wsQuery;
   console.log(`Connecting to WebSocket: ${wsUrl}`);
