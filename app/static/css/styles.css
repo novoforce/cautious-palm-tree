@@ -424,3 +424,26 @@
     }
   }
   
+
+/* ... (add this at the end of the file) ... */
+
+#newSessionButton {
+  background-color: var(--accent-color);
+  color: white;
+  margin-top: 15px; /* Add some space above it */
+  padding: 10px 20px;
+}
+
+#newSessionButton:hover:not(:disabled) {
+  background-color: #c5372c; /* Darker shade of red */
+}
+
+/* Optional: Style for the "New session started" message */
+.system-message {
+  font-style: italic;
+  color: #5F6368;
+  text-align: center;
+  align-self: center;
+  background-color: transparent !important;
+  font-size: 0.9em;
+}

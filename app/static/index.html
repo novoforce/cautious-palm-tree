@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Serena Voice Assistant</title>
-  <span id="connection-status">Connecting...</span>
+  <!-- The incorrect span that was here has been removed. -->
   <script src="/static/js/app.js" type="module"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
@@ -19,6 +19,7 @@
     <div class="status-indicator">
       <div class="status-item">
         <div id="status-dot" class="status-dot"></div>
+        <!-- This is the only 'connection-status' element now, and it will be updated correctly. -->
         <span id="connection-status">Connecting...</span>
       </div>
       <div class="status-item" id="recording-container" style="display: none;">
@@ -26,6 +27,7 @@
         <span id="recording-status">Recording</span>
       </div>
     </div>
+    <button type="button" id="newSessionButton">New Session</button>
   </header>
   <div class="chat-container">
     <div id="messages">
