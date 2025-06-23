@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 
-client = Client()
+client = Client(api_key=settings.GOOGLE_API_KEY)
 
 async def generate_image(prompt: str, tool_context: ToolContext):
   """Generates an image based on the prompt."""

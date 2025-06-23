@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     BQ_LOCATION: str ="us-central1"
     BQ_DATASET: str ="StyleHub"
     METADATA_JSON_PATH: str = "dataset_info.json"
-    GOOGLE_API_KEY: str 
+    GOOGLE_API_KEY: str
 
     # Vector DB Settings
     VECTOR_DB_PATH: str

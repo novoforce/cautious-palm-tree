@@ -18,6 +18,8 @@ from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
 from typing import AsyncIterable
 from app.services.visualization_agent.agent import _artifact_service, _session_service as _vis_session_service
+from dotenv import load_dotenv
+load_dotenv(override=True) # Load environment variables from .env file, overriding existing ones
 
 # Configure basic logging for the FastAPI app
 logging.basicConfig(
@@ -25,6 +27,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("fastapi_app")
 
+import os
+
+for key, value in os.environ.items():
+    print(f'ENV_VAR:> {key}: {value}')
 
 APP_NAME = "Serena Agent"
 session_service = InMemorySessionService()
