@@ -16,7 +16,7 @@ from app.services.visualization_agent.agent import call_visualization_agent
 from app.services.poster_agent.agent import call_poster_agent
 from app.services.email_agent.agent import call_email_agent
 from app.core.config import settings
-from .prompt import SUPERVISOR_INSTRUCTIONS, GLOBAL_INSTRUCTION, SUPERVISOR_DESCRIPTION, SUPERVISOR_INSTRUCTIONS2, SUPERVISOR_INSTRUCTIONS3
+from .prompt import SUPERVISOR_INSTRUCTIONS, GLOBAL_INSTRUCTION, SUPERVISOR_DESCRIPTION, SUPERVISOR_INSTRUCTIONS4
 # --- Constants ---
 APP_NAME = "code_pipeline_module_app"
 USER_ID = "dev_user_01"
@@ -92,7 +92,7 @@ supervisor = LlmAgent(
     name="Supervisor",
     model=settings.MODEL_GEMINI_2_0_FLASH_LIVE, #"gemini-2.0-flash-live-001", # Use a consistent and available model
     global_instruction=GLOBAL_INSTRUCTION,
-    instruction=SUPERVISOR_INSTRUCTIONS3,
+    instruction=SUPERVISOR_INSTRUCTIONS,
     description=SUPERVISOR_DESCRIPTION,
     tools=[
            call_chat_agent,

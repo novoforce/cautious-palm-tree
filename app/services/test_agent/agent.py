@@ -5,8 +5,8 @@ from google.cloud.exceptions import NotFound, GoogleCloudError
 import logging
 import traceback
 import os
-MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-live-001"
-
+MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-001"
+MODEL_GEMINI_2_0_FLASH_LIVE= "gemini-2.0-flash-live-001"  # Use the latest flash model available
 # MODEL_GEMINI_2_0_FLASH="gemini-2.0-flash-001"  # Use the latest flash model available
 
 logging.basicConfig(
@@ -218,6 +218,14 @@ QUERY_GENERATION_INSTRUCTION_STR = """
     <METADATA START>
     {bigquery_metadata}
     <METADATA END>
+
+    An example Big Query query are as below:
+
+    1. Simple Query:
+    SELECT first_name, last_name FROM `hackathon-agents.StyleHub.users`
+
+    2. Complex Query with aliases:
+    SELECT t1.first_name, t1.last_name, SUM(t2.sale_price) AS total_purchase_amount FROM `hackathon-agents.StyleHub.users` AS t1 INNER JOIN `hackathon-agents.StyleHub.order_items` AS t2 ON t1.id = t2.user_id GROUP BY 1, 2 ORDER BY total_purchase_amount DESC LIMIT 10
 
     Output only the generated query as text
     """
@@ -439,7 +447,7 @@ visualization_agent = SequentialAgent(
 
 # Below is a working example but fails in authentication:> 
 from google.adk.tools.application_integration_tool.application_integration_toolset import ApplicationIntegrationToolset
-sa_key_file_path =r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\rough_work_scripts\hackathon-agents-f18a9f8dc92b.json"
+sa_key_file_path =r"D:\3_hackathon\1_llm_agent_hackathon_google\cautious-palm-tree\hackathon-agents-f18a9f8dc92b.json"
 
 # Read the entire file content into a string
 with open(sa_key_file_path, 'r') as f:
@@ -493,7 +501,7 @@ email_agent_tool = agent_tool.AgentTool(agent=email_agent)
 
 coordinator1 = LlmAgent(
     name="HelpDeskCoordinator",
-    model=MODEL_GEMINI_2_0_FLASH,#"gemini-2.5-flash-preview-04-17",
+    model=MODEL_GEMINI_2_0_FLASH_LIVE,#"gemini-2.5-flash-preview-04-17",
     instruction="""
     You are an intelligent agent who routes the requests to the appropriate sub-agents based on the user query.
     Your primary task is to route the requests to the appropriate sub-agents based on the user query.

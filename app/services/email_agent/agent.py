@@ -9,7 +9,7 @@ from google.genai.types import Content, Part
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.adk.tools.application_integration_tool.application_integration_toolset import ApplicationIntegrationToolset
-
+from .prompt import EMAIL_AGENT_INSTRUCTION
 # Import our centralized settings
 from app.core.config import settings
 
@@ -47,11 +47,7 @@ email_agent = LlmAgent(
     name='email_agent',
     # Use the model from our settings
     model=settings.EMAIL_AGENT_GEMINI_MODEL,
-    instruction=(
-        "You are an agent that can send emails. When a user asks to send an email, "
-        "use the `email_sender` tool. Infer the recipient, subject, and body from the user's request. "
-        "After successfully using the tool, confirm to the user that the email has been sent."
-    ),
+    instruction=EMAIL_AGENT_INSTRUCTION,
     tools=[email_tool],
     output_key="email_agent_response" # Giving a clear output key
 )
@@ -67,7 +63,7 @@ async def call_email_agent(user_query: str) -> Dict[str, Any]:
     This agent uses a tool to interact with Google Cloud Application Integration.
     It requires a specific user query that contains information for the email.
 
-    Example Query: "Please send an email to student@university.edu with the subject 'Project Update' and the body 'The report is attached.'"
+    Example Query: "Please send an email Promotional email to the default mailboxes for campaigns"
 
     Args:
         user_query (str): The user's instruction to send an email.
